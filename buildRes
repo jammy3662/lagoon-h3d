@@ -15,11 +15,11 @@ say ""
 
 say "Updating shaders..."
 SHADERS=""
-for i in res/shader/*.fs
+for i in src/shader/*.fs
 do
 	SHADERS="$SHADERS $i"
 done
-for i in res/shader/*.vs
+for i in src/shader/*.vs
 do
 	SHADERS="$SHADERS $i"
 done
@@ -28,11 +28,11 @@ say "Done updating shaders.\n"
 
 say "Updating textures..."
 TEXTURES=""
-for i in res/texture/*.png
+for i in src/texture/*.png
 do
 	TEXTURES="$TEXTURES $i"
 done
-for i in res/texture/*.jpeg
+for i in src/texture/*.jpeg
 do
 	TEXTURES="$TEXTURES $i"
 done

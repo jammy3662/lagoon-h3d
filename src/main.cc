@@ -3,7 +3,12 @@
 
 #include "ext.h"
 
+#include "../compile/SHADER.c"
+#include "../compile/TEXTURE.c"
+
 #include "engine/define.h"
+#include "engine/rayext.h"
+
 #include "game/game.h"
 
 int main(int argc, char** argv)

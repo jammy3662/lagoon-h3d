@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../engine/rayext.h"
 #include "player.h"
 
 // internal output resolution
@@ -49,7 +48,7 @@ void Game::init()
 	player = &players[0];
 	cam = &player->cam;
 	
-	shader = LoadShader("res/shader/main.vs", "res/shader/main.fs");
+	shader = LoadShaderFromMemory(mainvsShaderCode, mainfsShaderCode);
 	
 	frame = LoadRenderTextureWithDepthTexture(FWIDTH, FHEIGHT);
 	envMap = LoadRenderTextureWithDepthTexture(FWIDTH, FHEIGHT);

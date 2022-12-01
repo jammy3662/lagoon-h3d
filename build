@@ -10,7 +10,7 @@ VERSION=$(date +%-y.%-m.%-d)
 PLATFORM=$(uname -m)
 
 FLAGS="-Wno-write-strings -g3 -fno-caret-diagnostics -ferror-limit=150"
-LINK="-Llib -lraylib -lstb -lglad -lGL -lglfw -lm -lpthread -ldl -lrt -lX11 -lenet"
+LINK="-Lcompile/lib -lraylib -lstb -lglad -lGL -lglfw -lm -lpthread -ldl -lrt -lX11 -lenet"
 
 clear
 
