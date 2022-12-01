@@ -1,0 +1,28 @@
+#!/bin/bash
+
+source ~/.bashalias # some helper functions
+# (need this for 'contains' command and c error formatting)
+
+IN="src/main.cc"
+OUT="sigh"
+
+VERSION=$(date +%-y.%-m.%-d)
+PLATFORM=$(uname -m)
+
+FLAGS="-Wno-write-strings -g3 -fno-caret-diagnostics -ferror-limit=150"
+LINK="-Llib -lraylib -lstb -lglad -lGL -lglfw -lm -lpthread -ldl -lrt -lX11 -lenet"
+
+clear
+
+./buildRes s
+
+# compile code
+
+cerror-filter \
+clang++ -c $IN -o compile/main.o -isystem src -isystem inc -isystem ~/include $FLAGS -DVERSION="\"$VERSION\"" -DPLATFORM="\"$PLATFORM\"" -DDEBUG
+SUCCESS=$?
+
+# compile program with resource binary
+clang++ compile/main.o compile/SHADER.o compile/TEXTURE.o -o "$OUT" -isystem src -isystem inc -isystem ~/include $FLAGS $LINK -DVERSION="\"$VERSION\"" -DPLATFORM="\"$PLATFORM\"" -DDEBUG
+
+exit $SUCCESS
