@@ -26,7 +26,53 @@ uniform sampler2D texture8; // irradiance
 
 out vec4 finalColor;
 
+uniform vec3 eye; // camera position
+uniform float near = 0.01; // near clipping plane distance
+uniform float far = 1000.0; // far clipping plane distance
+
+uniform int projection;
+uniform int renderDepth = 0;
+uniform int renderReflection = 1;
+
+vec4 calcLight(vec4 color, vec4 pos, vec3 normal)
+{
+	
+	
+	return color;
+}
+
+vec4 calcReflection(vec4 color, vec4 pos, vec3 normal)
+{
+	
+	
+	return color;
+}
+
 void main()
 {
-	finalColor = vec4(1,1,1,1);
+	vec4 color;
+	color = colDiffuse * texture(texture0, fragCoord);
+	
+	if (renderDepth == 1)
+	{
+		if (projection == 0)
+		{
+			float z = (gl_FragCoord.z * 2.0 - 1.0) / gl_FragCoord.w;
+			float depth = (z + near) / (near + far);
+			finalColor = vec4(vec3(depth), 1.0);
+		}
+		if (projection == 1)
+		{
+			finalColor = vec4(vec3(gl_FragCoord.z), 1.0);
+		}
+	}
+	if (renderDepth == 0)
+	{
+		color = calcLight(color, fragPos, fragNormal);
+		if (renderReflection == 1)
+		{
+			color = calcReflection(finalColor, fragPos, fragNormal);
+		}
+		finalColor = color;
+	}
 }

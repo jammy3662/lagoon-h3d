@@ -28,11 +28,11 @@ say "Done updating shaders.\n"
 
 say "Updating textures..."
 TEXTURES=""
-for i in src/texture/*.png
+for i in res/texture/*.png
 do
 	TEXTURES="$TEXTURES $i"
 done
-for i in src/texture/*.jpeg
+for i in res/texture/*.jpeg
 do
 	TEXTURES="$TEXTURES $i"
 done

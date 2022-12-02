@@ -25,4 +25,6 @@ SUCCESS=$?
 # compile program with resource binary
 clang++ compile/main.o compile/SHADER.o compile/TEXTURE.o -o "$OUT" -isystem src -isystem inc -isystem ~/include $FLAGS $LINK -DVERSION="\"$VERSION\"" -DPLATFORM="\"$PLATFORM\"" -DDEBUG
 
+SUCCESS=$?
+
 exit $SUCCESS

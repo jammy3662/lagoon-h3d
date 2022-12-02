@@ -16,6 +16,19 @@ struct Player
 	void move(vec3 delta);
 	void update();
 	void render();
+	
+	Player()
+	{
+		cam = Camera();
+		
+		height = 0.5;
+		walkSpeed = 0.05;
+
+		position = {0,0,0};
+		velocity = {0,0,0};
+
+		cam.refresh();
+	}
 };
 
 void Player::move(vec3 delta)
@@ -35,24 +48,9 @@ void Player::update()
 
 void Player::render()
 {
+	DrawRectangle(100,100,100,100,{100,0,100,255});
 	if (cam.orbit)
 	{
 		
 	}
-}
-
-Player newPlayer()
-{
-	Player ret;
-
-	ret.height = 0.5;
-	ret.walkSpeed = 0.05;
-	
-	ret.position = {0,0,0};
-	ret.velocity = {0,0,0};
-	
-	ret.cam.init();
-	ret.cam.refresh();
-	
-	return ret;
 }

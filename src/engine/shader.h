@@ -3,46 +3,45 @@
 #include <raylib.h>
 
 int textureSlot = 0;
+Shader activeShader;
 
-struct shader: public virtual Shader
+inline
+void shbind(Shader shader)
 {
-	int loc(char* name);
-
-	void setValue(int loc, void* value, int uniformType);
-
-	void setMatrix(int loc, Matrix matrix);
-
-	void setVector(int loc, void* values, int uniformType, int count);
-
-	void setTexture(int loc, Texture texture, int* slot, int type);
-};
-
-int shader::loc(char* name)
-{
-	return GetShaderLocation(*this, name);
+	activeShader = shader;
 }
 
-void shader::setValue(int loc, void* value, int uniformType)
+inline
+int shloc(char* name)
 {
-	SetShaderValue(*this, loc, value, uniformType);
+	return GetShaderLocation(activeShader, name);
 }
 
-void shader::setMatrix(int loc, Matrix matrix)
+inline
+void shvalue(int loc, void* value, int uniformType)
 {
-	SetShaderValueMatrix(*this, loc, matrix);
+	SetShaderValue(activeShader, loc, value, uniformType);
 }
 
-void shader::setVector(int loc, void* values, int uniformType, int count)
+inline
+void shmatrix(int loc, Matrix matrix)
 {
-	SetShaderValueV(*this, loc, values, uniformType, count);
+	SetShaderValueMatrix(activeShader, loc, matrix);
 }
 
-void shader::setTexture(int loc, Texture texture, int* slot, int type)
+inline
+void shvec(int loc, void* values, int uniformType, int count)
+{
+	SetShaderValueV(activeShader, loc, values, uniformType, count);
+}
+
+inline
+void shtexture(int loc, Texture texture, int* slot, int type)
 {
 	int idx = textureSlot + 12;
 	textureSlot += 1;
 
-	rlEnableShader(this->id);
+	rlEnableShader(activeShader.id);
 	rlActiveTextureSlot(idx);
 	#if defined(GRAPHICS_API_OPENGL_11)
 		glEnable(type);
@@ -52,8 +51,24 @@ void shader::setTexture(int loc, Texture texture, int* slot, int type)
 }
 
 inline
-void resetTextures()
+void shresetTextures()
 {
 	rlDisableTexture();
 	textureSlot = 0;
+}
+
+void shset(Model* model)
+{
+	for (int i = 0; i < model->materialCount; i++)
+	{
+		model->materials[i].shader = activeShader;
+	}
+}
+
+void shset(Model* model, Shader shader)
+{
+	for (int i = 0; i < model->materialCount; i++)
+	{
+		model->materials[i].shader = shader;
+	}
 }

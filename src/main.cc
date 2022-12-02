@@ -15,8 +15,11 @@ int main(int argc, char** argv)
 {
 	int running = true;
 	
+	//SetTraceLogLevel(LOG_WARNING);
+	
 	InitWindow(1280, 720, "sigh");
 	SetTargetFPS(60);
+	SetExitKey(0);
 	
 	Game game;
 	game.init();

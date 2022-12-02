@@ -5,6 +5,8 @@
 
 #include <glad/glad.h>
 
+#define cRectangle(a,b,c,d) {(float)a,(float)b,(float)c,(float)d}
+
 RenderTexture2D LoadRenderTextureWithDepthTexture(int width, int height)
 {
     RenderTexture2D target = {0};
@@ -170,43 +172,24 @@ TextureCubemap LoadTextureCubeMap(Texture top, Texture bottom, Texture north, Te
 {
 	TextureCubemap ret;
 	
-	Image faces;
-	
 	// Convert image data to 6 faces in a vertical column, that's the optimum layout for loading
-	faces = GenImageColor(top.width, top.height*6, MAGENTA);
-	ImageFormat(&faces, top.format);
+	Image map = GenImageColor(top.width, top.height*6, MAGENTA);
+	ImageFormat(&map, top.format);
 
-	// NOTE: Image formating does not work with compressed textures
+	Texture faces[] = {west, east, top, bottom, north, south};
 	
-	ImageDraw(&faces, LoadImageFromTexture(west),
-		{(float)0,(float)0,(float) top.width,(float) top.height},
-		{(float)0,(float)top.height*0,(float) top.width,(float) top.height},
-		{255,255,255,255});
-	ImageDraw(&faces, LoadImageFromTexture(east),
-		{(float)0,(float)0,(float) top.width,(float) top.height},
-		{(float)0,(float)top.height*1,(float) top.width,(float) top.height},
-		{255,255,255,255});
-	ImageDraw(&faces, LoadImageFromTexture(top),
-		{(float)0,(float)0,(float) top.width,(float) top.height},
-		{(float)0,(float)top.height*2,(float) top.width,(float) top.height},
-		{255,255,255,255});
-	ImageDraw(&faces, LoadImageFromTexture(bottom),
-		{(float)0,(float)0,(float) top.width,(float) top.height},
-		{(float)0,(float)top.height*3,(float) top.width,(float) top.height},
-		{255,255,255,255});
-	ImageDraw(&faces, LoadImageFromTexture(north),
-		{(float)0,(float)0,(float) top.width,(float) top.height},
-		{(float)0,(float)top.height*4,(float) top.width,(float) top.height},
-		{255,255,255,255});
-	ImageDraw(&faces, LoadImageFromTexture(south),
-		{(float)0,(float)0,(float) top.width,(float) top.height},
-		{(float)0,(float)top.height*5,(float) top.width,(float) top.height},
-		{255,255,255,255});
+	for (int i = 0; i < 6; i++)
+	{
+		ImageDraw(&map, LoadImageFromTexture(faces[i]),
+			cRectangle(0, 0, top.width, top.height),
+			cRectangle(0, top.height*i, top.width, top.height),
+			{255,255,255,255});
+	}
 	
-	ret.id = rlLoadTextureCubemap(faces.data, top.width, faces.format); 
+	ret.id = rlLoadTextureCubemap(map.data, top.width, map.format); 
 	if (ret.id == 0) fprintf(stderr, "CUBEMAP ERR: could not load\n");
 	
-	UnloadImage(faces);
+	UnloadImage(map);
 	
 	return ret;
 }
