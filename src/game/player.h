@@ -3,7 +3,7 @@
 #include "weapon.h"
 #include "../engine/camera.h"
 
-#define PLAYER_EYE 0.9
+#define PLAYER_EYE (float)0.9
 #define PLAYER_HEIGHT 1
 
 #define PLAYER_FOV_MIN 30
@@ -34,6 +34,10 @@ struct Player
 	void update(bool readInputs);
 	void render();
 	
+	inline vec3 eye () {
+		return {position.x, position.y + PLAYER_EYE, position.z};
+	}
+	
 	float lerpAverage(float from, float to, float weight);
 	
 	void setOrbit(int o);
@@ -43,6 +47,7 @@ Player Player_()
 {
 	Player player;
 	
+	player.setOrbit(true);
 	player.cam.orbitDistance = PLAYER_ORBIT_DISTANCE;
 	
 	Mesh tempMesh = GenMeshCube(0.5, 1, 0.5);

@@ -48,6 +48,9 @@ struct Game
 	RenderTexture envEast;
 	RenderTexture envWest;
 	
+	Ray targetRay;
+	RayCollision targetCol;
+	
 	int paused = false;
 
 	void init();
@@ -125,6 +128,17 @@ void Game::update()
 	{
 		players[i].update(false);
 	}
+	
+	// Render "reticle" at target onscreen //
+	targetRay.position = player->eye();
+	targetRay.direction = Vector3Normalize(player->cam.lookdir);
+	
+	for (int i = 0; i < map.model.meshCount; i++)
+	{
+		Mesh m = map.model.meshes[i]; 
+		targetCol = GetRayCollisionMesh(targetRay, m, MatrixIdentity());
+		if (targetCol.hit) break;
+	}
 }
 
 inline
@@ -156,6 +170,20 @@ void Game::present()
 	
 	//DrawCube({0,1,0}, 0.1, 0.1, 0.1, {255,0,255,255});
 	DrawModel(map.model, {0,0,0}, 1, {255,255,255,255});
+	
+	// "reticle"
+	//printf("%f %f %f\n", targetCol.point.x, targetCol.point.y, targetCol.point.z);
+	//DrawSphere(targetCol.point, 1, {255,0,255,255});
+	DrawRay(targetRay, {255,0,0,255});
+	
+	rlDisableDepthTest();
+	
+	if (targetCol.hit) DrawSphere(targetCol.point, 0.1, {255,0,255,255});
+	else DrawSphere (
+		Vector3Add(player->eye(), player->cam.lookdir),
+		0.1, {255,0,255,255});
+	
+	rlEnableDepthTest();
 	
 	EndMode3D();
 }

@@ -64,7 +64,9 @@ struct Cam
 	
 	vec3 position = {0,0,0};
 	
-	int orbit = true;
+	vec3 lookdir = {0,0,-1};
+	
+	int orbit = false;
 	float orbitDistance = 1;
 	vec3 orbitOffset = {0,0,0};
 	
@@ -144,7 +146,7 @@ void Cam::update()
 	Quaternion rotation =
 		QuaternionFromEuler(ry, rx, rz);
 	
-	vec3 lookdir =
+	lookdir =
 		Vector3RotateByQuaternion({0,0,-1}, rotation);
 	rlcam.target = Vector3Add(position, lookdir);
 	
