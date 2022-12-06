@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "ext.h"
+#include "../include/ext.h"
 
 #include "../compile/SHADER.c"
 #include "../compile/TEXTURE.c"
@@ -11,11 +11,16 @@
 
 #include "game/game.h"
 
+void drawFrame(Texture frame, Color tint)
+{
+	DrawTexturePro(frame, cRectangle(0,0, frame.width, -frame.height), cRectangle(0,0, wwidth, wheight), {0,0}, 0, tint);
+}
+
 int main(int argc, char** argv)
 {
 	int running = true;
 	
-	//SetTraceLogLevel(LOG_WARNING);
+	SetTraceLogLevel(LOG_WARNING);
 	
 	InitWindow(1280, 720, "sigh");
 	SetTargetFPS(60);
@@ -39,6 +44,9 @@ int main(int argc, char** argv)
 		ClearBackground({0,0,0,255});
 		
 		game.render();
+		
+		drawFrame(game.frame.texture, {255,255,255,255});
+		//drawFrame(game.lightMap.texture, {255,255,255,255});
 		
 		EndDrawing();
 	}

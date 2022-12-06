@@ -19,11 +19,11 @@ clear
 # compile code
 
 cerror-filter \
-clang++ -c $IN -o compile/main.o -isystem src -isystem inc -isystem ~/include $FLAGS -DVERSION="\"$VERSION\"" -DPLATFORM="\"$PLATFORM\"" -DDEBUG
+clang++ -c $IN -o compile/MAIN.o -isystem src -isystem inc -isystem ~/include $FLAGS -DVERSION="\"$VERSION\"" -DPLATFORM="\"$PLATFORM\"" -DDEBUG
 SUCCESS=$?
 
 # compile program with resource binary
-clang++ compile/main.o compile/SHADER.o compile/TEXTURE.o -o "$OUT" -isystem src -isystem inc -isystem ~/include $FLAGS $LINK -DVERSION="\"$VERSION\"" -DPLATFORM="\"$PLATFORM\"" -DDEBUG
+clang++ compile/MAIN.o compile/SHADER.o compile/TEXTURE.o -o "$OUT" -isystem src -isystem inc -isystem ~/include $FLAGS $LINK -DVERSION="\"$VERSION\"" -DPLATFORM="\"$PLATFORM\"" -DDEBUG
 
 SUCCESS=$?
 

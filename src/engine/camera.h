@@ -2,71 +2,159 @@
 
 #include <raylib.h>
 
-#define Camera _Camera
+#define NORM(LO, X, HI) (X - LO / (HI - LO))
 
-struct Camera: public virtual Camera3D
+struct Cam
 {
-	// horizontal and vertical
-	// camera sensitivity
-	float HSENS;
-	float VSENS;
+	// default fields
+	Camera3D rlcam = {
+		{0,0,0}, // position
+		{0,0,0}, // target
+		{0,1,0}, // up dir
+		90,      // fov
+		CAMERA_PERSPECTIVE
+	};
 	
-	float nearClip;
-	float farClip;
+	// rotation
+	float ry = 0;
+	float rx = 0;
+	float rz = 0;
 	
-	// in radians
-	float pitch;
-	float yaw;
-	float roll;
+	// rotation delta
+	float dx = 0;
+	float dy = 0;
 	
-	// third person camera
-	int orbit;
-	float orbitDist; // distance from camera to orbit point
-	vec3 orbitOffset; // distance from camera target to orbit point
+	// target rotation delta
+	float dxTarget = 0;
+	float dyTarget = 0;
 	
-	vec3 anchor; // pov-agnostic position of camera
+	// SPEED
+	// ------
+	// Amount of rotation per frame
+	// 1   = 0.02 degrees
+	// 5   = 0.1 degrees
+	// 50  = 1 degrees
+	// 100 = 2 degrees
+	int speedX = 10;
+	int speedY = 10;
 	
-	Camera()
-	{
-		SetCameraMode((Camera3D)*this, CAMERA_CUSTOM);
-		up = {0,1,0};
-		
-		nearClip = 0.01;
-		farClip = 1000.0;
-		
-		pitch = 0;
-		yaw = 0;
-		roll = 0;
-	}
+	// SENSITIVITY
+	// ------------
+	// How quickly the camera
+	// responds to input
+	// 1     floaty
+	// 10    loose
+	// 30    natural
+	// 50    fast
+	// 70    tight
+	// 90    precise
+	int sensX = 40;
+	int sensY = 40;
 	
-	void refresh();
-	void rotate(float y, float x, float z);
+	// SMOOTHING
+	// ---------
+	// Smooths out quick fluctuations
+	// 0    none
+	// 10   rigid
+	// 30   natural
+	// 50   smooth
+	// 70   fluid
+	// 90   drunk
+	int smoothX = 60;
+	int smoothY = 60;
+	
+	vec3 position = {0,0,0};
+	
+	int orbit = true;
+	float orbitDistance = 1;
+	vec3 orbitOffset = {0,0,0};
+	
+	float lerpAverage(float from, float to, float weight);
+	
+	void rotate(float dy, float dx, float dz);
+	void update();
+	
+	void calc(float& rotation, float& delta, float& deltaTarget, float total, int speed, int sens, int smooth); 
 };
 
-void Camera::refresh()
+float Cam::lerpAverage(float from, float to, float weight = 0.5)
 {
-	#define vrq Vector3RotateByQuaternion
+	return (from * (1-weight)) + (to * (weight));
+}
+
+void Cam::calc(float& r, float& dr, float& tdr, float t, int speed, int sens, int smooth)
+{
+	#define FAC(X, HI) ((float)CLAMP(1, X, HI) / (float)HI)
 	
-	Quaternion rotation = QuaternionFromEuler(pitch, yaw, roll);
+	// calculate interpolation weights
+	float speedWeight = (float)speed / 50;
+	float sensWeight = FAC (sens, 100);
+	float smoothWeight = FAC (100 - smooth, 100);
 	
-	vec3 lookdir = vrq({0,0,-1}, rotation);
-	vec3 backdir = vrq({0,0,orbitDist}, rotation);
+	float target = t * DEG2RAD * speedWeight; // convert to radians for raylib calculations
 	
-	target = Vector3Add(anchor, lookdir);
-	position = anchor;
+	tdr = lerpAverage(tdr, t, sensWeight);
+	dr = lerpAverage(dr, tdr, smoothWeight);
+	r = fmod(r + dr, 2*M_PI);
+	
+	#undef FAC
+}
+
+void Cam::rotate(float y, float x, float z)
+{
+	test_input:
+	{
+		// DEBUG //
+		if (IsKeyPressed(kup))
+		{
+			sensX = MIN(sensX + 5, 100);
+			sensY = MIN(sensY + 5, 100);
+			printf("sens: %i\n", sensX); 
+		}
+		else if (IsKeyPressed(kdown))
+		{
+			sensX = MAX(sensX - 5, 0);
+			sensY = MAX(sensY - 5, 0);
+			printf("sens: %i\n", sensX); 
+		}
+		
+		// DEBUG //
+		if (IsKeyPressed(kleft))
+		{
+			smoothX = MAX(smoothX - 5, 0);
+			smoothY = MAX(smoothY - 5, 0);
+			printf("smooth: %i\n", smoothX); 
+		}
+		else if (IsKeyPressed(kright))
+		{
+			smoothX = MIN(smoothX + 5, 100);
+			smoothY = MIN(smoothY + 5, 100);
+			printf("smooth: %i\n", smoothX); 
+		}
+	}
+	
+	calc(rx, dx, dxTarget, x, speedX, sensX, smoothX);
+	calc(ry, dy, dyTarget, y, speedY, sensY, smoothY);
+	
+	ry = CLAMP((float)-1.55, ry, (float)1.55);
+	rz = fmod(rx + z, 2*M_PI);
+}
+
+void Cam::update()
+{
+	Quaternion rotation =
+		QuaternionFromEuler(ry, rx, rz);
+	
+	vec3 lookdir =
+		Vector3RotateByQuaternion({0,0,-1}, rotation);
+	rlcam.target = Vector3Add(position, lookdir);
+	
+	rlcam.position = position;
 	
 	if (orbit)
 	{
-		position = Vector3Subtract(anchor, backdir);
-		position = Vector3Add(position, orbitOffset);
+		lookdir = Vector3Scale(lookdir, orbitDistance);
+		rlcam.position = Vector3Subtract(rlcam.position, lookdir);
+		rlcam.position = Vector3Add(rlcam.position, orbitOffset);
 	}
-	
-	#undef vrq
-}
-
-void Camera::rotate(float y, float x, float z)
-{
-	pitch = clamp((float)-1.55, pitch + y, (float)1.55);
-	yaw = fmod(yaw + x, 2*M_PI);
-	roll = fmod(roll + z, 2*M_PI);
 }

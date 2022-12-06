@@ -27,7 +27,7 @@ uniform sampler2D texture8; // irradiance
 out vec4 finalColor;
 
 uniform vec3 eye; // camera position
-uniform float near = 0.01; // near clipping plane distance
+uniform float near = 0.1; // near clipping plane distance
 uniform float far = 1000.0; // far clipping plane distance
 
 uniform int projection;
@@ -60,10 +60,12 @@ void main()
 			float z = (gl_FragCoord.z * 2.0 - 1.0) / gl_FragCoord.w;
 			float depth = (z + near) / (near + far);
 			finalColor = vec4(vec3(depth), 1.0);
+			finalColor = vec4(fragCoord.x, fragCoord.y, 1, 1);
 		}
 		if (projection == 1)
 		{
 			finalColor = vec4(vec3(gl_FragCoord.z), 1.0);
+			finalColor = vec4(fragCoord.x, fragCoord.y, 1, 1);
 		}
 	}
 	if (renderDepth == 0)
@@ -75,4 +77,6 @@ void main()
 		}
 		finalColor = color;
 	}
+	
+	finalColor = vec4(fragCoord.x,1,fragCoord.y,1);
 }

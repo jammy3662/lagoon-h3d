@@ -7,6 +7,8 @@
 #define FWIDTH 1920
 #define FHEIGHT 1080
 
+#define ENVMAP_DIM 10
+
 #define LOBBY_MAX 18
 
 struct Stage
@@ -15,18 +17,18 @@ struct Stage
 };
 
 struct Game
-{
-	Player players[LOBBY_MAX];
-	
+{	
 	// numbers of players
 	int alphaCt; // team a
 	int betaCt; // team b
 	int ghostCt; // spectators
 	
-	Camera* cam;
+	Player players[LOBBY_MAX];
 	Player* player;
 	
 	Stage map;
+
+	Camera* activeCam;
 
 	// camera to render environment map
 	Camera envCam;
@@ -45,16 +47,29 @@ struct Game
 	RenderTexture envSouth;
 	RenderTexture envEast;
 	RenderTexture envWest;
+	
+	int paused = false;
 
 	void init();
 	void update();
 	void render();
 	
-	void present(Camera camera);
+	void pause(int p);
+	
+	void present();
+	void presentTo(RenderTexture target);
 	
 	void setShaderDepth(int flag, int projection);
 	void setShaderReflection(int flag);
 };
+
+void Game::pause(int p)
+{
+	paused = p;
+	
+	if (p) EnableCursor();
+	else DisableCursor();
+}
 
 void Game::init()
 {
@@ -62,12 +77,14 @@ void Game::init()
 	
 	frame = LoadRenderTextureWithDepthTexture(FWIDTH, FHEIGHT);
 	
-	envTop = LoadRenderTextureWithDepthTexture(FWIDTH, FHEIGHT);
-	envBottom = LoadRenderTextureWithDepthTexture(FWIDTH, FHEIGHT);
-	envNorth = LoadRenderTextureWithDepthTexture(FWIDTH, FHEIGHT);
-	envSouth = LoadRenderTextureWithDepthTexture(FWIDTH, FHEIGHT);
-	envEast = LoadRenderTextureWithDepthTexture(FWIDTH, FHEIGHT);
-	envWest = LoadRenderTextureWithDepthTexture(FWIDTH, FHEIGHT);
+	lightMap = LoadRenderTextureWithDepthTexture(FWIDTH, FHEIGHT);
+	
+	envTop = LoadRenderTextureWithDepthTexture(ENVMAP_DIM, ENVMAP_DIM);
+	envBottom = LoadRenderTextureWithDepthTexture(ENVMAP_DIM, ENVMAP_DIM);
+	envNorth = LoadRenderTextureWithDepthTexture(ENVMAP_DIM, ENVMAP_DIM);
+	envSouth = LoadRenderTextureWithDepthTexture(ENVMAP_DIM, ENVMAP_DIM);
+	envEast = LoadRenderTextureWithDepthTexture(ENVMAP_DIM, ENVMAP_DIM);
+	envWest = LoadRenderTextureWithDepthTexture(ENVMAP_DIM, ENVMAP_DIM);
 	
 	// TODO: TESTING ONLY!
 	alphaCt = 1;
@@ -75,61 +92,39 @@ void Game::init()
 	ghostCt = 0;
 	
 	player = &players[0];
-	*player = Player();
-	player->cam.orbit = false;
-	//player->cam.projection = CAMERA_PERSPECTIVE;
+	for (int i = 0; i < alphaCt + betaCt + ghostCt; i++)
+	{
+		players[i] = Player_();
+	}
 	
-	cam = &player->cam;
+	player->focused = true;
+	activeCam = &player->cam.rlcam;
 	
 	map.model = LoadModel("res/mesh/underpass.glb");
 	shset(&map.model, shader);
 	
-	lightCam.orbit = false;
+	SetCameraMode(lightCam, CAMERA_CUSTOM);
+	lightCam.up = {0,1,0};
 	lightCam.projection = CAMERA_ORTHOGRAPHIC;
 	lightCam.fovy = 90;
 	
-	envCam.orbit = false;
+	SetCameraMode(envCam, CAMERA_CUSTOM);
+	envCam.up = {0,1,0};
 	envCam.projection = CAMERA_PERSPECTIVE;
-	envCam.fovy = 90;	
+	envCam.fovy = 90;
+	
+	pause(false);
 }
 
 void Game::update()
 {
-	if (IsKeyPressed(ktab))
+	if (IsKeyPressed(kexit)) pause(!paused);
+	
+	player->update(!paused);
+	for (int i = 1; i < alphaCt + betaCt; i++)
 	{
-		cam->orbit = !cam->orbit;
+		players[i].update(false);
 	}
-	
-	vec2 moused = GetMouseDelta();
-	player->cam.rotate(moused.y * DEG2RAD * 0.4, moused.x * DEG2RAD * 0.4, 0);
-	
-	//
-	// calculate input movement vector
-	//
-	
-	vec2 dir = {0,0};
-	
-	if (IsKeyDown(keast)) dir.x = -1;
-	else if (IsKeyDown(kwest)) dir.x = 1;
-	
-	if (IsKeyDown(knorth)) dir.y = -1;
-	else if (IsKeyDown(ksouth)) dir.y = 1;
-	
-	if (IsKeyDown(kjump))
-	{
-		player->move({0, player->walkSpeed, 0});
-	}
-	else if (IsKeyDown(kctrl))
-	{
-		player->move({0, -player->walkSpeed, 0});
-	}
-	
-	dir = Vector2Rotate(dir, 2*M_PI - cam->yaw);
-	dir = Vector2Normalize(dir);
-	dir = Vector2Scale(dir, player->walkSpeed);
-	
-	player->move({dir.x, 0, dir.y});
-	player->update();
 }
 
 inline
@@ -150,68 +145,77 @@ void Game::setShaderReflection(int flag)
 }
 
 // how to render a single pass of the scene
-void Game::present(Camera camera)
+void Game::present()
 {
+	BeginMode3D(*activeCam);
+	
 	for (int i = 0; i < alphaCt + betaCt; i++)
 	{
 		players[i].render();
 	}
 	
-	BeginMode3D((Camera3D)camera, camera.nearClip, camera.farClip);
-	
-	DrawCube({0,1,0}, 0.1, 0.1, 0.1, {255,0,255,255});
-	DrawModel(map.model, {0,0,0}, 0.2, {255,255,255,255});
+	//DrawCube({0,1,0}, 0.1, 0.1, 0.1, {255,0,255,255});
+	DrawModel(map.model, {0,0,0}, 1, {255,255,255,255});
 	
 	EndMode3D();
 }
 
+void Game::presentTo(RenderTexture target)
+{
+	BeginTextureMode(target);
+	ClearBackground({0,0,0,255});
+	present();
+	EndTextureMode();
+}
+
 void Game::render()
 {
-/*	
+	// rendering as light, so force player
+	// to draw even in first person cam
+	player->focused = false;
+	
 	// Render depth from light perspective //
 	shadow_render:
 	
-	setShaderDepth(true, CAMERA_ORTHOGRAPHIC);
+	//setShaderDepth(true, CAMERA_ORTHOGRAPHIC);
+	//setShaderDepth(true, CAMERA_PERSPECTIVE);
 	
-	BeginTextureMode(lightMap);
-	present(lightCam);
-	EndTextureMode();
+	lightCam.target = player->cam.position;
+	
+	vec3 lightOffset = Vector3Scale(player->lookdir, 10);
+	lightCam.position =
+		Vector3Subtract(player->cam.position, lightOffset);
+	lightCam.projection = CAMERA_PERSPECTIVE;
+	
+	activeCam = &lightCam;
+	
+	presentTo(lightMap);
 	
 	// Render environment to cubemap //
 	env_render:
+	
+	// now rendering from player perspective,
+	// so only draw player in orbit cam
+	player->focused = true;
 	
 	setShaderDepth(false, CAMERA_PERSPECTIVE);
 	setShaderReflection(false);
 	// dont try to render reflections
 	// this cubemap has to be rendered first
 	
-	BeginTextureMode(envTop);
-	present(envCam);
-	EndTextureMode();
-	BeginTextureMode(envBottom);
-	present(envCam);
-	EndTextureMode();
-	BeginTextureMode(envNorth);
-	present(envCam);
-	EndTextureMode();
-	BeginTextureMode(envSouth);
-	present(envCam);
-	EndTextureMode();
-	BeginTextureMode(envEast);
-	present(envCam);
-	EndTextureMode();
-	BeginTextureMode(envWest);
-	present(envCam);
-	EndTextureMode();
-*/	
+	activeCam = &envCam;
+	
+	presentTo(envTop);
+	presentTo(envBottom);
+	presentTo(envNorth);
+	presentTo(envSouth);
+	presentTo(envEast);
+	presentTo(envWest);
+	
 	main_render:
 	
-//	setShaderReflection(true);
+	setShaderReflection(true);
 	
-//	BeginTextureMode(frame);
-	
-	rlEnableDepthTest();
-	present(player->cam);
-	
-//	EndTextureMode();
+	activeCam = &player->cam.rlcam;
+	presentTo(frame);
 }
