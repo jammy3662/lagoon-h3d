@@ -131,7 +131,9 @@ void Game::update()
 	
 	// Render "reticle" at target onscreen //
 	targetRay.position = player->eye();
-	targetRay.direction = Vector3Normalize(player->cam.lookdir);
+	targetRay.direction = player->cam.lookdir;
+	if (player->cam.orbit) targetRay.direction = Vector3Add(targetRay.direction, player->cam.orbitOffset);
+	targetRay.direction = Vector3Normalize(targetRay.direction);
 	
 	for (int i = 0; i < map.model.meshCount; i++)
 	{
@@ -161,6 +163,8 @@ void Game::setShaderReflection(int flag)
 // how to render a single pass of the scene
 void Game::present()
 {
+	//BeginBlendMode(BLEND_ADD_COLORS);
+	
 	BeginMode3D(*activeCam);
 	
 	for (int i = 0; i < alphaCt + betaCt; i++)
@@ -186,6 +190,8 @@ void Game::present()
 	rlEnableDepthTest();
 	
 	EndMode3D();
+	
+	//EndBlendMode();
 }
 
 void Game::presentTo(RenderTexture target)

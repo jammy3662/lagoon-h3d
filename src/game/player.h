@@ -19,6 +19,10 @@ struct Player
 	vec3 position = {0,0,0};
 	vec3 velocity = {0,0,0};
 	
+	vec2 dir = {0,0}; // movement direction (global)
+	vec2 dirNext = {0,0};
+	vec2 dirTarget = {0,0};
+	
 	Cam cam;
 	float fov = 90;
 	
@@ -28,6 +32,49 @@ struct Player
 	
 	Model model;
 	int focused = false;
+	
+	enum
+	{
+		IDLE,
+		WALKING,
+		RUNNING,
+		CETA,
+		SLIDING,
+		SWIMMING,
+	};
+	
+	int idle = true;
+	int fast = false;
+	
+	int ceta = false;
+	int shift = false;
+	// isShift is true when
+	// in between forms
+	
+	inline
+	int isWalking()
+	{ return !idle && !ceta && !fast; }
+	inline
+	int isRunning()
+	{ return !idle && !ceta && fast; }
+	inline
+	int isSliding()
+	{ return !idle && ceta && !fast; }
+	inline
+	int isSwimming()
+	{ return !idle && ceta && fast; }
+	inline
+	int isMovingHuman()
+	{ return !idle && !ceta; }
+	inline
+	int isMovingCeta()
+	{ return !idle && ceta; }
+	inline
+	int isIdleHuman()
+	{ return idle && !ceta; }
+	inline
+	int isIdleCeta()
+	{ return idle && ceta; }
 	
 	void init();
 	void move(vec3 delta);
@@ -49,8 +96,14 @@ Player Player_()
 	
 	player.setOrbit(true);
 	player.cam.orbitDistance = PLAYER_ORBIT_DISTANCE;
+	player.cam.orbitDistance = 2;
+	player.cam.orbitOffset = {1,0,0};
 	
-	Mesh tempMesh = GenMeshCube(0.5, 1, 0.5);
+	Mesh tempMesh = GenMeshCube (
+		PLAYER_HEIGHT*0.5,
+		PLAYER_HEIGHT,
+		PLAYER_HEIGHT*0.5
+	);
 	player.model = LoadModelFromMesh(tempMesh);
 	
 	Shader sh = LoadShaderFromMemory(mainvsShaderCode,mainfsShaderCode);
@@ -89,16 +142,31 @@ void Player::move(vec3 delta)
 	position = Vector3Add(position, delta);
 }
 
+float waverage(float from, float to, float weight)
+{
+	return (from * (1-weight)) + (to * (weight));
+}
+
+vec2 waverage(vec2 from, vec2 to, float weight)
+{
+	return Vector2Add (
+		Vector2Scale(from, (1-weight)),
+		Vector2Scale(to, (weight))
+	);
+}
+
 void Player::update(bool readInputs)
 {
+	vec2 dmouse = {0,0};
+	vec2 wishdir = {0,0};
+	
 	if (readInputs)
 	{
 		// camera / aiming //
 		
-		vec2 dmouse = GetMouseDelta();
+		dmouse = GetMouseDelta();
 		dmouse.x = -dmouse.x;
 		dmouse.y = -dmouse.y;
-		cam.rotate(dmouse.y * DEG2RAD, dmouse.x * DEG2RAD, 0);
 		
 		if (IsKeyPressed(ktab))
 		{
@@ -106,14 +174,27 @@ void Player::update(bool readInputs)
 		}
 	
 		// movement //
-		
-		vec2 dir = {0,0};
 	
-		if (IsKeyDown(keast)) dir.x = 1;
-		else if (IsKeyDown(kwest)) dir.x = -1;
+		if (IsKeyDown(keast)) wishdir.x = 1;
+		else if (IsKeyDown(kwest)) wishdir.x = -1;
 		
-		if (IsKeyDown(knorth)) dir.y = -1;
-		else if (IsKeyDown(ksouth)) dir.y = 1;
+		if (IsKeyDown(knorth)) wishdir.y = -1;
+		else if (IsKeyDown(ksouth)) wishdir.y = 1;
+		
+		wishdir = Vector2Rotate(wishdir, 2*M_PI - cam.rx);
+		wishdir = Vector2Normalize(wishdir);
+		
+		dirTarget.x = waverage(dirTarget.x, wishdir.x, 0.3);
+		dirTarget.y = waverage(dirTarget.y, wishdir.y, 0.3);
+		
+		dirNext.x = waverage(dirNext.x, dirTarget.x, 0.2);
+		dirNext.y = waverage(dirNext.y, dirTarget.y, 0.2);
+		
+		dir.x = waverage(dir.x, dirNext.x, 0.9);
+		dir.y = waverage(dir.y, dirNext.y, 0.9);
+		
+		// TESTING
+		dir = Vector2Scale(dir, walkSpeed);
 		
 		if (IsKeyDown(kjump))
 		{
@@ -123,19 +204,10 @@ void Player::update(bool readInputs)
 		{
 			move({0, -walkSpeed, 0});
 		}
-		
-		dir = Vector2Rotate(dir, 2*M_PI - cam.rx);
-		dir = Vector2Normalize(dir);
-		dir = Vector2Scale(dir, walkSpeed);
-		
-		move({dir.x, 0, dir.y});
 	}
-	else
-	{
-		// allow the camera to continue
-		// interpolating even with blocked input
-		cam.rotate(0,0,0);
-	}
+	
+	cam.rotate(dmouse.y * DEG2RAD, dmouse.x * DEG2RAD, 0);
+	move({dir.x, 0, dir.y});
 	
 	// update camera state
 	vec3 eye = position;
@@ -149,6 +221,8 @@ void Player::render()
 {
 	if (cam.orbit || !focused)
 	{
-		DrawModel(model, position, 1, {255,255,255,255});
+		vec3 point = position;
+		point.y += PLAYER_HEIGHT * 0.5;
+		DrawModel(model, point, 1, {255,255,255,255});
 	}
 }

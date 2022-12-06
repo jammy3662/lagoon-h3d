@@ -11,9 +11,13 @@
 
 #include "game/game.h"
 
+Shader frameShader;
+
 void drawFrame(Texture frame, Color tint)
 {
+	BeginShaderMode(frameShader);
 	DrawTexturePro(frame, cRectangle(0,0, frame.width, -frame.height), cRectangle(0,0, wwidth, wheight), {0,0}, 0, tint);
+	EndShaderMode();
 }
 
 int main(int argc, char** argv)
@@ -25,6 +29,9 @@ int main(int argc, char** argv)
 	InitWindow(1280, 720, "sigh");
 	SetTargetFPS(60);
 	SetExitKey(0);
+	
+	frameShader = LoadShaderFromMemory(
+		mainvsShaderCode, framefsShaderCode);
 	
 	Game game;
 	game.init();

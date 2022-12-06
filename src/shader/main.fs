@@ -28,20 +28,20 @@ out vec4 finalColor;
 
 uniform vec3 eye; // camera position
 uniform float near = 0.1; // near clipping plane distance
-uniform float far = 1000.0; // far clipping plane distance
+uniform float far = 100.0; // far clipping plane distance
 
 uniform int projection;
 uniform int renderDepth = 0;
 uniform int renderReflection = 1;
 
-vec4 calcLight(vec4 color, vec4 pos, vec3 normal)
+vec3 calcLight(vec3 color, vec4 pos, vec3 normal)
 {
 	
 	
 	return color;
 }
 
-vec4 calcReflection(vec4 color, vec4 pos, vec3 normal)
+vec3 calcReflection(vec3 color, vec4 pos, vec3 normal)
 {
 	
 	
@@ -50,33 +50,29 @@ vec4 calcReflection(vec4 color, vec4 pos, vec3 normal)
 
 void main()
 {
-	vec4 color;
-	color = colDiffuse * texture(texture0, fragCoord);
+	vec3 color;
+	color = colDiffuse.rgb * texture(texture0, fragCoord).rgb;
 	
-	if (renderDepth == 1)
+	float depth;
+	
+	if (projection == 0)
 	{
-		if (projection == 0)
-		{
-			float z = (gl_FragCoord.z * 2.0 - 1.0) / gl_FragCoord.w;
-			float depth = (z + near) / (near + far);
-			finalColor = vec4(vec3(depth), 1.0);
-			finalColor = vec4(fragCoord.x, fragCoord.y, 1, 1);
-		}
-		if (projection == 1)
-		{
-			finalColor = vec4(vec3(gl_FragCoord.z), 1.0);
-			finalColor = vec4(fragCoord.x, fragCoord.y, 1, 1);
-		}
+		float z = (gl_FragCoord.z * 2.0 - 1.0) / gl_FragCoord.w;
+		depth = (z + near) / (near + far);
 	}
-	if (renderDepth == 0)
+	if (projection == 1)
 	{
-		color = calcLight(color, fragPos, fragNormal);
-		if (renderReflection == 1)
-		{
-			color = calcReflection(finalColor, fragPos, fragNormal);
-		}
-		finalColor = color;
+		depth = gl_FragCoord.z;
 	}
 	
-	finalColor = vec4(fragCoord.x,1,fragCoord.y,1);
+	//color = calcLight(color, fragPos, fragNormal);
+	
+	if (renderReflection == 1)
+	{
+		//color = calcReflection(color, fragPos, fragNormal);
+	}
+	
+	finalColor.rgb = color;
+	finalColor.a = depth;
+	finalColor.a = 1;
 }
