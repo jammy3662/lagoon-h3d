@@ -88,62 +88,19 @@ void Player::update(bool readInputs)
 {
 	if (readInputs)
 	{
-/*
-		dmouse.x *= DEG2RAD * sensX * -1;
-		dmouse.y *= DEG2RAD * sensY;
+		// camera / aiming //
 		
-		// DEBUG //
-		if (IsKeyPressed(kup))
-		{
-			cSensX = MIN(cSensX + 5, 100);
-			cSensY = MIN(cSensY + 5, 100);
-			printf("sens: %i\n", cSensX); 
-		}
-		else if (IsKeyPressed(kdown))
-		{
-			cSensX = MAX(cSensX - 5, 0);
-			cSensY = MAX(cSensY - 5, 0);
-			printf("sens: %i\n", cSensX); 
-		}
-		
-		// DEBUG //
-		if (IsKeyPressed(kleft))
-		{
-			cSmoothX = MAX(cSmoothX - 5, 0);
-			cSmoothY = MAX(cSmoothY - 5, 0);
-			printf("smooth: %i\n", cSmoothX); 
-		}
-		else if (IsKeyPressed(kright))
-		{
-			cSmoothX = MIN(cSmoothX + 5, 100);
-			cSmoothY = MIN(cSmoothY + 5, 100);
-			printf("smooth: %i\n", cSmoothX); 
-		}
-		
-		float dwx = (float)CLAMP(1, (cSensX), 100) * 0.01;
-		float dwy = (float)CLAMP(1, (cSensY), 100) * 0.01;
-		
-		float cwx = (float)CLAMP(1, (100 - cSmoothX), 100) * 0.01;
-		float cwy = (float)CLAMP(1, (100 - cSmoothY), 100) * 0.01;
-		
-		drx = lerpAverage(drx, dmouse.x, dwx);
-		dry = lerpAverage(dry, dmouse.y, dwy);
-		
-		crx = lerpAverage(crx, drx, cwx);
-		cry = lerpAverage(cry, dry, cwy);
-		
-		ry = CLAMP((float)-1.55, ry + cry, (float)1.55);
-		rx = fmod(rx + crx, 2*M_PI);
+		vec2 dmouse = GetMouseDelta();
+		dmouse.x = -dmouse.x;
+		dmouse.y = -dmouse.y;
+		cam.rotate(dmouse.y * DEG2RAD, dmouse.x * DEG2RAD, 0);
 		
 		if (IsKeyPressed(ktab))
 		{
-			setOrbit(!orbit);
+			setOrbit(!cam.orbit);
 		}
-*/
 	
-		//
-		// movement input
-		//
+		// movement //
 		
 		vec2 dir = {0,0};
 	
@@ -168,11 +125,12 @@ void Player::update(bool readInputs)
 		
 		move({dir.x, 0, dir.y});
 	}
-
-	vec2 dmouse = GetMouseDelta();
-	dmouse.x = -dmouse.x;
-	dmouse.y = -dmouse.y;
-	cam.rotate(dmouse.y * DEG2RAD, dmouse.x * DEG2RAD, 0);
+	else
+	{
+		// allow the camera to continue
+		// interpolating even with blocked input
+		cam.rotate(0,0,0);
+	}
 	
 	// update camera state
 	vec3 eye = position;

@@ -2,8 +2,6 @@
 
 #include <raylib.h>
 
-#define NORM(LO, X, HI) (X - LO / (HI - LO))
-
 struct Cam
 {
 	// default fields
@@ -31,35 +29,36 @@ struct Cam
 	// SPEED
 	// ------
 	// Amount of rotation per frame
-	// 1   = 0.02 degrees
-	// 5   = 0.1 degrees
-	// 50  = 1 degrees
-	// 100 = 2 degrees
-	int speedX = 10;
-	int speedY = 10;
+	// 0     none
+	// 5     1/100 degree
+	// 50    1/10 degree
+	// 100   MAX
+	// 500   1 degree
+	int speedX = 50;
+	int speedY = 50;
 	
 	// SENSITIVITY
 	// ------------
 	// How quickly the camera
 	// responds to input
-	// 1     floaty
-	// 10    loose
-	// 30    natural
-	// 50    fast
-	// 70    tight
-	// 90    precise
+	// 1    floaty
+	// 10   loose
+	// 30   natural
+	// 50   fast
+	// 70   tight
+	// 90   precise
 	int sensX = 40;
 	int sensY = 40;
 	
 	// SMOOTHING
 	// ---------
 	// Smooths out quick fluctuations
-	// 0    none
-	// 10   rigid
-	// 30   natural
-	// 50   smooth
-	// 70   fluid
-	// 90   drunk
+	// 0   none
+	// 10  rigid
+	// 30  natural
+	// 50  smooth
+	// 70  fluid
+	// 90  drunk
 	int smoothX = 60;
 	int smoothY = 60;
 	
@@ -87,13 +86,13 @@ void Cam::calc(float& r, float& dr, float& tdr, float t, int speed, int sens, in
 	#define FAC(X, HI) ((float)CLAMP(1, X, HI) / (float)HI)
 	
 	// calculate interpolation weights
-	float speedWeight = (float)speed / 50;
+	float speedWeight = (float)speed / 500;
 	float sensWeight = FAC (sens, 100);
 	float smoothWeight = FAC (100 - smooth, 100);
 	
-	float target = t * DEG2RAD * speedWeight; // convert to radians for raylib calculations
+	float target = t * speedWeight; // convert to radians for raylib calculations
 	
-	tdr = lerpAverage(tdr, t, sensWeight);
+	tdr = lerpAverage(tdr, target, sensWeight);
 	dr = lerpAverage(dr, tdr, smoothWeight);
 	r = fmod(r + dr, 2*M_PI);
 	
@@ -137,7 +136,7 @@ void Cam::rotate(float y, float x, float z)
 	calc(ry, dy, dyTarget, y, speedY, sensY, smoothY);
 	
 	ry = CLAMP((float)-1.55, ry, (float)1.55);
-	rz = fmod(rx + z, 2*M_PI);
+	rz = fmod(rz + z, 2*M_PI);
 }
 
 void Cam::update()
