@@ -28,7 +28,7 @@ out vec4 finalColor;
 
 uniform vec3 eye; // camera position
 uniform float near = 0.1; // near clipping plane distance
-uniform float far = 100.0; // far clipping plane distance
+uniform float far = 1000; // far clipping plane distance
 
 uniform int projection;
 uniform int renderDepth = 0;
@@ -50,29 +50,8 @@ vec3 calcReflection(vec3 color, vec4 pos, vec3 normal)
 
 void main()
 {
-	vec3 color;
-	color = colDiffuse.rgb * texture(texture0, fragCoord).rgb;
+	vec4 color;
+	color = colDiffuse * fragColor * texture(texture0, fragCoord);
 	
-	float depth;
-	
-	if (projection == 0)
-	{
-		float z = (gl_FragCoord.z * 2.0 - 1.0) / gl_FragCoord.w;
-		depth = (z + near) / (near + far);
-	}
-	if (projection == 1)
-	{
-		depth = gl_FragCoord.z;
-	}
-	
-	//color = calcLight(color, fragPos, fragNormal);
-	
-	if (renderReflection == 1)
-	{
-		//color = calcReflection(color, fragPos, fragNormal);
-	}
-	
-	finalColor.rgb = color;
-	finalColor.a = depth;
-	finalColor.a = 1;
+	finalColor = color;
 }

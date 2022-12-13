@@ -3,6 +3,7 @@
 #include <raylib.h>
 #include <raymath.h>
 #include <rlgl.h>
+#include "rayext.h"
 
 #define let auto
 
@@ -38,3 +39,20 @@ int fheight = 1080;
 // window (onscreen drawing)
 int wwidth = 1280;
 int wheight = 720;
+
+float waverage(float from, float to, float weight)
+{
+	return (from * (1-weight)) + (to * (weight));
+}
+
+vec2 waverage(vec2 from, vec2 to, float weight)
+{
+	return Vector2Add (
+		Vector2Scale(from, (1-weight)),
+		Vector2Scale(to, (weight))
+	);
+}
+
+Shader defaultShader;
+
+void drawFrame(Texture frame, Color tint);

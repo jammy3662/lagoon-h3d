@@ -5,7 +5,42 @@
 
 #include <glad/glad.h>
 
-#define cRectangle(a,b,c,d) {(float)a,(float)b,(float)c,(float)d}
+#define Rectangle(x,y,w,h) {(float)x,(float)y,(float)w,(float)h}
+
+RenderTexture2D LoadRenderTextureSharedDepth(RenderTexture2D source, int width, int height)
+{
+    RenderTexture2D target = {0};
+
+    target.id = rlLoadFramebuffer(source.texture.width, source.texture.height);   // Load an empty framebuffer
+
+    if (target.id > 0)
+    {
+        rlEnableFramebuffer(target.id);
+
+        // Create color texture (default to RGBA)
+        target.texture.id = rlLoadTexture(NULL, width, height, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
+        target.texture.width = width;
+        target.texture.height = height;
+        target.texture.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+        target.texture.mipmaps = 1;
+
+        // Create depth texture
+        target.depth = source.depth;
+
+        // Attach color texture and depth texture to FBO
+        rlFramebufferAttach(target.id, target.texture.id, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+        rlFramebufferAttach(target.id, target.depth.id, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_RENDERBUFFER, 0);
+
+        // Check if fbo is complete with attachments (valid)
+		if (rlFramebufferComplete(target.id)) printf("Framebuffer object %i created successfully\n", target.id);
+        if (rlFramebufferComplete(target.id)) TRACELOG(LOG_INFO, "FBO: [ID %i] Framebuffer object created successfully", target.id);
+
+        rlDisableFramebuffer();
+    } 
+    else TRACELOG(LOG_WARNING, "FBO: Framebuffer object can not be created");
+
+    return target;
+}
 
 RenderTexture2D LoadRenderTextureWithDepthTexture(int width, int height)
 {
@@ -146,10 +181,14 @@ void DrawBillboardXY(Texture tx, Vector3 pos, Vector2 size, Camera3D cam)
 	rlPopMatrix();
 }
 
-#define DrawTextureFlippedY(texture, x, y, tint) DrawTexturePro(texture, \
-	{(float)x,(float)y, (float)texture.width, (float)-texture.height}, \
-	{(float)x,(float)y, (float)texture.width, (float)texture.height}, \
-	{0.0,0.0}, 0, tint)
+inline void DrawTextureFlippedY(Texture texture, float x, float y, Color tint)
+{
+	DrawTexturePro (
+		texture,
+		{(float)x,(float)y, (float)texture.width, (float)-texture.height},
+		{(float)x,(float)y, (float)texture.width, (float)texture.height},
+		{0,0}, 0, tint);
+}
 
 Texture LoadTexture3D(int width, int height, int depth, uint8* texelbuffer)
 {
@@ -181,8 +220,8 @@ TextureCubemap LoadTextureCubeMap(Texture top, Texture bottom, Texture north, Te
 	for (int i = 0; i < 6; i++)
 	{
 		ImageDraw(&map, LoadImageFromTexture(faces[i]),
-			cRectangle(0, 0, top.width, top.height),
-			cRectangle(0, top.height*i, top.width, top.height),
+			Rectangle(0, 0, top.width, top.height),
+			Rectangle(0, top.height*i, top.width, top.height),
 			{255,255,255,255});
 	}
 	

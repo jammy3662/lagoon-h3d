@@ -11,27 +11,35 @@
 
 #include "game/game.h"
 
-Shader frameShader;
+/*
+LOG_ALL (0)        // Display all logs
+LOG_TRACE          // Trace logging, intended for internal use only
+LOG_DEBUG          // Debug logging, used for internal debugging, it should be disabled on release builds
+LOG_INFO (3)       // Info logging, used for program execution info
+LOG_WARNING        // Warning logging, used on recoverable failures
+LOG_ERROR          // Error logging, used on unrecoverable failures
+LOG_FATAL (6)      // Fatal logging, used to abort program: exit(EXIT_FAILURE)
+LOG_NONE            // Disable logging
+*/
 
 void drawFrame(Texture frame, Color tint)
 {
-	BeginShaderMode(frameShader);
-	DrawTexturePro(frame, cRectangle(0,0, frame.width, -frame.height), cRectangle(0,0, wwidth, wheight), {0,0}, 0, tint);
-	EndShaderMode();
+	curShader = defaultShader;
+	shresetTextures();
+	DrawTexturePro(frame, Rectangle(0,0, frame.width, -frame.height), Rectangle(0,0, wwidth, wheight), {0,0}, 0, tint);
 }
 
 int main(int argc, char** argv)
 {
 	int running = true;
 	
-	SetTraceLogLevel(LOG_WARNING);
+	SetTraceLogLevel(4);
 	
 	InitWindow(1280, 720, "sigh");
 	SetTargetFPS(60);
 	SetExitKey(0);
 	
-	frameShader = LoadShaderFromMemory(
-		mainvsShaderCode, framefsShaderCode);
+	defaultShader = curShader = LoadShader(0,0);
 	
 	Game game;
 	game.init();
@@ -53,7 +61,8 @@ int main(int argc, char** argv)
 		game.render();
 		
 		drawFrame(game.frame.texture, {255,255,255,255});
-		//drawFrame(game.lightMap.texture, {255,255,255,255});
+		//drawFrame(game.player->frame.depth, {255,255,255, (1-game.player->opacity)*255});
+		//drawFrame(game.sunMap.texture, {255,255,255,255});
 		
 		EndDrawing();
 	}

@@ -152,13 +152,17 @@ void Cam::update()
 	
 	rlcam.position = position;
 	
-	if (orbit)
-	{
-		lookdir = Vector3Scale(lookdir, orbitDistance);
-		rlcam.position = Vector3Subtract(rlcam.position, lookdir);
+	//if (orbit)
+	//{
+		vec3 reach = Vector3Scale(lookdir, orbitDistance);
+		rlcam.position = Vector3Subtract(rlcam.position, reach);
 		rlcam.position = Vector3Add (
 			rlcam.position,
 			Vector3RotateByQuaternion(orbitOffset, rotation)
 		);
-	}
+		rlcam.target = Vector3Add (
+			rlcam.target,
+			Vector3RotateByQuaternion(orbitOffset, rotation)
+		);
+	//}
 }
