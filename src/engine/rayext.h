@@ -7,8 +7,11 @@
 
 #define Rectangle(x,y,w,h) {(float)x,(float)y,(float)w,(float)h}
 
-RenderTexture2D LoadRenderTextureSharedDepth(RenderTexture2D source, int width, int height)
+RenderTexture2D LoadRenderTextureSharedDepth(RenderTexture2D source)
 {
+	int width = source.texture.width;
+	int height = source.texture.height;
+	
     RenderTexture2D target = {0};
 
     target.id = rlLoadFramebuffer(source.texture.width, source.texture.height);   // Load an empty framebuffer
@@ -81,9 +84,9 @@ RenderTexture2D LoadRenderTextureWithDepthTexture(int width, int height)
     return target;
 }
 
-Matrix GetCameraProjection(Camera3D camera, double nearClip, double farClip)
+Matrix MatrixProjection(Camera3D camera, float w, float h)
 {
-	float aspect = (float)rlGetFramebufferWidth()/(float)rlGetFramebufferHeight();
+	float aspect = w / h;
 	
 	if (camera.projection == CAMERA_ORTHOGRAPHIC)
 	{
@@ -102,7 +105,7 @@ Matrix GetCameraProjection(Camera3D camera, double nearClip, double farClip)
 }
 
 // Initializes 3D mode with custom camera (3D)
-void BeginMode3D(Camera3D camera, double nearClip, double farClip)
+void Begin3D(Camera3D camera, float w, float h)
 {
     rlDrawRenderBatchActive();      // Update and draw internal render batch
 
@@ -110,7 +113,8 @@ void BeginMode3D(Camera3D camera, double nearClip, double farClip)
     rlPushMatrix();                 // Save previous matrix, which contains the settings for the 2d ortho projection
     rlLoadIdentity();               // Reset current matrix (projection)
 
-    float aspect = (float)rlGetFramebufferWidth()/(float)rlGetFramebufferHeight();
+	float aspect = w / h;
+    //float aspect = (float)rlGetFramebufferWidth()/(float)rlGetFramebufferHeight();
 
     // NOTE: zNear and zFar values are important when computing depth buffer values
     if (camera.projection == CAMERA_PERSPECTIVE)

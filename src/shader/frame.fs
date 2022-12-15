@@ -6,6 +6,7 @@ in vec2 fragCoord2;
 in vec3 fragNormal;
 in vec3 fragTangent;
 in vec4 fragColor;
+in vec4 sunFragPos;
 
 uniform sampler2D frame;
 uniform vec4 colDiffuse;

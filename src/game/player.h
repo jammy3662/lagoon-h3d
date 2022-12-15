@@ -153,6 +153,7 @@ void update(bool readInputs)
 	
 	opacity = cam.ry / (M_PI);
 	opacity += 0.5;
+	opacity = 0;
 	
 	// update camera state //
 	cam.position = eye();

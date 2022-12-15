@@ -24,8 +24,7 @@ LOG_NONE            // Disable logging
 
 void drawFrame(Texture frame, Color tint)
 {
-	curShader = defaultShader;
-	shresetTextures();
+	shader.use(defaultShader);
 	DrawTexturePro(frame, Rectangle(0,0, frame.width, -frame.height), Rectangle(0,0, wwidth, wheight), {0,0}, 0, tint);
 }
 
@@ -44,6 +43,8 @@ int main(int argc, char** argv)
 	Game game;
 	game.init();
 	
+	int test = false;
+	
 	while (running)
 	{
 		if (WindowShouldClose())
@@ -60,9 +61,10 @@ int main(int argc, char** argv)
 		
 		game.render();
 		
+		if (IsKeyPressed(KEY_V)) test = !test;
+		
 		drawFrame(game.frame.texture, {255,255,255,255});
-		//drawFrame(game.player->frame.depth, {255,255,255, (1-game.player->opacity)*255});
-		//drawFrame(game.sunMap.texture, {255,255,255,255});
+		if (test) drawFrame(game.sunMap.depth, {255,255,255,255});
 		
 		EndDrawing();
 	}

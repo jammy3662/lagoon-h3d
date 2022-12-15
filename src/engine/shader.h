@@ -2,34 +2,43 @@
 
 #include <raylib.h>
 
+struct _shader {
+	
 int textureSlot = 0;
 
-inline
-int shloc(char* name)
+inline void use (Shader shader)
+{
+	curShader = shader;
+	rlDisableTexture();
+	textureSlot = 0;
+}
+
+// get uniform location by name
+inline int getLoc (char* name)
 {
 	return GetShaderLocation(curShader, name);
 }
 
-inline
-void shvalue(int loc, void* value, int uniformType)
+// value
+inline void attach (char* loc, void* value, int uniformType)
 {
-	SetShaderValue(curShader, loc, value, uniformType);
+	SetShaderValue(curShader, getLoc(loc), value, uniformType);
 }
 
-inline
-void shmatrix(int loc, Matrix matrix)
+// matrix
+inline void attach (char* loc, Matrix matrix)
 {
-	SetShaderValueMatrix(curShader, loc, matrix);
+	SetShaderValueMatrix(curShader, getLoc(loc), matrix);
 }
 
-inline
-void shvec(int loc, void* values, int uniformType, int count)
+// array
+inline void attach (char* loc, void* values, int count, int uniformType)
 {
-	SetShaderValueV(curShader, loc, values, uniformType, count);
+	SetShaderValueV(curShader, getLoc(loc), values, uniformType, count);
 }
 
-inline
-void shtexture(int loc, Texture texture, int type)
+// texture
+inline void attach (char* loc, Texture texture, int type)
 {
 	int idx = textureSlot + 12;
 	textureSlot += 1;
@@ -40,12 +49,8 @@ void shtexture(int loc, Texture texture, int type)
 		glEnable(type);
 	#endif
 	glBindTexture(type, texture.id);
-	rlSetUniform(loc, &idx, SHADER_UNIFORM_INT, 1);
+	rlSetUniform(getLoc(loc), &idx, SHADER_UNIFORM_INT, 1);
 }
 
-inline
-void shresetTextures()
-{
-	rlDisableTexture();
-	textureSlot = 0;
-}
+} 
+shader;

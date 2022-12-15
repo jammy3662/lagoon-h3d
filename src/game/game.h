@@ -30,26 +30,23 @@ Stage map;
 
 Camera* activeCam;
 
-// camera to render environment map
+// environment map camera
 Camera envCam;
-// camera to render shadow map
+// shadow map camera
 Camera sunCam;
 
 vec3 sunPos;
-float sunDist = 10;
-float sunHeight = 60 * DEG2RAD; // pitch
-float sunAngle = 45 * DEG2RAD; // pivot
+vec4 sunColor = {1,1,1,1};
+float sunDist = 12;
+float sunHeight = 45 * DEG2RAD; // pitch
+float sunAngle = 225 * DEG2RAD; // pivot
 
-Shader shader; // surface shader (pbr)
+Shader surfaceShader; // surface shader (pbr)
 Shader depthShader;
-Shader odepthShader;
 Shader envShader; // environment map
-Shader clipShader;
+Shader blurShader;
 
-RenderTexture frame;
-RenderTexture depth;
-RenderTexture worldF;
-RenderTexture playerF;
+RenderTexture frame; // final output
 RenderTexture sunMap;
 
 // environment map
@@ -70,17 +67,17 @@ void pause(int p)
 
 void init()
 {
-	shader = LoadShaderFromMemory(mainvsShaderCode, mainfsShaderCode);
-	depthShader = LoadShaderFromMemory(mainvsShaderCode, depthfsShaderCode);
-	odepthShader = LoadShaderFromMemory(mainvsShaderCode, odepthfsShaderCode);
-	envShader = shader;
+	farClip = 100;
 	
-	clipShader = LoadShaderFromMemory(mainvsShaderCode, clipfsShaderCode);
+	surfaceShader = LoadShaderFromMemory(mainvsShaderCode, mainfsShaderCode);
+	depthShader = LoadShaderFromMemory(depthvsShaderCode, depthfsShaderCode);
+	envShader = surfaceShader;
+	blurShader = LoadShaderFromMemory(depthvsShaderCode, blurfsShaderCode);
 	
 	frame = LoadRenderTexture(FWIDTH, FHEIGHT);
-	depth = LoadRenderTexture(FWIDTH, FHEIGHT);
 	
-	sunMap = LoadRenderTexture(FWIDTH, FHEIGHT);
+	// double frame resolution for clarity at distances
+	sunMap = LoadRenderTextureWithDepthTexture(FWIDTH*2, FHEIGHT*2);
 	
 	for (int i = 0; i < 6; i++)
 	{
@@ -96,8 +93,8 @@ void init()
 	{
 		players[i] = Player_();
 	}
-	player = (players+0); // first player in array
-	player->frame = LoadRenderTextureSharedDepth(frame, FWIDTH, FHEIGHT);
+	player = (players + 0); // first player in array
+	player->frame = LoadRenderTextureSharedDepth(frame);
 	
 	activeCam = &player->cam.rlcam;
 	
@@ -111,14 +108,14 @@ void init()
 	SetCameraMode(sunCam, CAMERA_CUSTOM);
 	sunCam.up = {0,1,0};
 	sunCam.projection = CAMERA_ORTHOGRAPHIC;
-	sunCam.fovy = 90;
+	sunCam.fovy = 20;
 	
 	SetCameraMode(envCam, CAMERA_CUSTOM);
 	envCam.up = {0,1,0};
 	envCam.projection = CAMERA_PERSPECTIVE;
 	envCam.fovy = 90;
 	
-	pause(false);
+	pause(true);
 }
 
 void update()
@@ -173,15 +170,14 @@ void presentCetas()
 // Depth from sun perspective //
 void renderShadows()
 {
-	sunCam.position = Vector3Add (
-		sunPos, player->position);
-	sunCam.target = Vector3Add (
-		player->eye(), player->cam.lookdir); 
+	vec3 focus = Vector3Add(player->position, player->cam.lookdir);
+	sunCam.position = Vector3Add(focus, sunPos);
+	sunCam.target = focus; 
 	
 	BeginTextureMode(sunMap);
 	ClearBackground({255,255,255,255});
 	
-	BeginMode3D(sunCam);
+	Begin3D(sunCam, FWIDTH, FHEIGHT);
 	
 	presentWorld();
 	presentCetas();
@@ -227,7 +223,7 @@ void renderEnvironment()
 		BeginTextureMode(envMap[i]);
 		ClearBackground({0,0,0,255});
 		
-		BeginMode3D(envCam);
+		Begin3D(envCam, FWIDTH, FHEIGHT);
 		
 		presentWorld();
 		presentCetas();
@@ -242,7 +238,7 @@ void renderEnvironment()
 // Player view //
 void renderPlayer()
 {	
-	BeginMode3D(player->cam.rlcam);
+	Begin3D(player->cam.rlcam, FWIDTH, FHEIGHT);
 	
 	player->present();
 	
@@ -251,7 +247,7 @@ void renderPlayer()
 
 void renderWorld()
 {
-	BeginMode3D(player->cam.rlcam);
+	Begin3D(player->cam.rlcam, FWIDTH, FHEIGHT);
 	
 	presentWorld();
 	presentCetas();
@@ -261,18 +257,31 @@ void renderWorld()
 
 void renderPrep()
 {
-	curShader = odepthShader;
+	shader.use(depthShader);
 	renderShadows();
 	
 	// render surfaces without reflections
-	curShader = envShader;
+	/*
+	shader.use(envShader);
 	renderEnvironment();
+	*/
 }
 
 void renderMain()
-{	
+{
 	// surface shader with materials
-	curShader = shader;
+	shader.use(surfaceShader);
+	
+	Matrix sunView = MatrixLookAt(sunCam.position, sunCam.target, sunCam.up);
+	Matrix sunProj = MatrixProjection(sunCam, FWIDTH, FHEIGHT);
+	shader.attach("sunView", sunView);
+	shader.attach("sunProj", sunProj);
+	
+	shader.attach("sunColor", &sunColor, SHADER_UNIFORM_VEC4);
+	shader.attach("sunDir", &sunCam.position, SHADER_UNIFORM_VEC3);
+	shader.attach("shadowMap", sunMap.depth, GL_TEXTURE_2D);
+	
+	shader.attach("eye", &player->cam.rlcam.position, SHADER_UNIFORM_VEC3);
 	
 	BeginTextureMode(frame);
 	ClearBackground({0,0,0,255});
@@ -280,34 +289,15 @@ void renderMain()
 	EndTextureMode();
 	
 	BeginTextureMode(player->frame);
-	rlClearColor(0,0,0,0);
+	// dont clear depth; sharing with main frame
+	glClearColor(0,0,0,0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	renderPlayer();
 	EndTextureMode();
-/*
-	// render depth for clipping
-	curShader = depthShader;
 	
-	BeginTextureMode(player->depth);
-	ClearBackground({0,255,255,255});
-	renderPlayer();
-	EndTextureMode();
-	
-	BeginTextureMode(depth);
-	ClearBackground({255,255,255,255});
-	renderWorld();
-	EndTextureMode();
-	
-	curShader = clipShader;
-	
-	shresetTextures();
-	shtexture(shloc("color"), player->frame.texture, GL_TEXTURE_2D); 
-	shtexture(shloc("depthSrc"), depth.texture, GL_TEXTURE_2D); 
-	shtexture(shloc("depthDst"), player->depth.texture, GL_TEXTURE_2D);
-*/	
 	BeginTextureMode(frame);
 	
-	curShader = defaultShader;
+	shader.use(defaultShader);
 	DrawTextureFlippedY(player->frame.texture, 0,0, { 255,255,255, (u8)((1 - player->opacity) * 255) });
 	
 	EndTextureMode();

@@ -12,7 +12,7 @@ PLATFORM=$(uname -m)
 FLAGS="-Wno-c++11-narrowing -Wno-write-strings -g3 -fno-caret-diagnostics -ferror-limit=150"
 LINK="-Lcompile/lib -lraylib -lstb -lglad -lGL -lglfw -lm -lpthread -ldl -lrt -lX11 -lenet"
 
-clear
+#clear
 
 ./buildRes s
 
