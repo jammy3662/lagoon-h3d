@@ -1,6 +1,8 @@
 #pragma once
 
+#include "../engine/define.h"
 #include "../engine/shader.h"
+
 #include "player.h"
 
 // internal output resolution
@@ -38,7 +40,7 @@ Camera sunCam;
 
 vec3 sunPos;
 vec4 sunColor = {1,1,1,1};
-float sunDist = 12;
+float sunDist = 20;
 float sunHeight = 45 * DEG2RAD; // pitch
 float sunAngle = 225 * DEG2RAD; // pivot
 
@@ -69,7 +71,7 @@ void pause(int p)
 void init()
 {
 	nearClip = 0.01;
-	farClip = 100;
+	farClip = 200;
 	
 	surfaceShader = LoadShaderFromMemory(mainvsShaderCode, mainfsShaderCode);
 	depthShader = LoadShaderFromMemory(depthvsShaderCode, depthfsShaderCode);
@@ -113,12 +115,12 @@ void init()
 	SetCameraMode(sunCam, CAMERA_CUSTOM);
 	sunCam.up = {0,1,0};
 	sunCam.projection = CAMERA_ORTHOGRAPHIC;
-	sunCam.fovy = 20;
+	sunCam.fovy = 30;
 	
 	SetCameraMode(envCam, CAMERA_CUSTOM);
 	envCam.up = {0,1,0};
 	envCam.projection = CAMERA_PERSPECTIVE;
-	envCam.fovy = 90;
+	envCam.fovy = 65;
 	
 	pause(true);
 }
@@ -126,6 +128,14 @@ void init()
 void update()
 {
 	if (IsKeyPressed(kexit)) pause(!paused);
+	
+	if (IsKeyPressed(KEY_Q)) sunAngle += 5 * DEG2RAD;
+	else
+	if (IsKeyPressed(KEY_E)) sunAngle -= 5 * DEG2RAD;
+	
+	if (IsKeyPressed(KEY_ONE)) sunHeight += 5 * DEG2RAD;
+	else
+	if (IsKeyPressed(KEY_THREE)) sunHeight -= 5 * DEG2RAD;
 	
 	player->update(!paused);
 	for (int i = 1; i < alphaCt + betaCt; i++)
@@ -136,6 +146,11 @@ void update()
 	
 	targetRay.position = curCam->position;
 	targetRay.direction = curPlayer->lookdir();
+	
+	Quaternion sunRotQuat = QuaternionFromEuler(sunHeight, sunAngle, 0);
+	sunPos = Vector3RotateByQuaternion (
+		Vector3Scale (
+			{0,0,-1}, sunDist), sunRotQuat);
 	
 	for (int i = 0; i < map.model.meshCount; i++)
 	{
@@ -155,9 +170,7 @@ void present()
 	// (it doesnt exist yet; make it)
 	if (targetCol.hit) DrawSphere(targetCol.point, 0.1, {255,0,255,255});
 	else DrawSphere (
-		Vector3Add (
-			curCam->position,
-			curPlayer->lookdir()),
+		Vector3Add (curCam->position, curPlayer->lookdir()),
 		0.1, {255,0,255,255});
 	
 	for (int i = 1; i < alphaCt + betaCt; i++)
@@ -173,15 +186,13 @@ void genShadows()
 	
 	vec3 reach = Vector3Scale(
 		curPlayer->lookdir(),
-		(farClip - nearClip) * 0.5);
+		(farClip - nearClip) * 0.1);
+	reach = curPlayer->lookdir();
 	
 	vec3 focus = Vector3Add(curPlayer->eye(), reach);
 	
 	sunCam.position = Vector3Add(focus, sunPos);
 	sunCam.target = focus;
-	
-	sunCam.position = Vector3Add(curPlayer->camera().position, sunPos);
-	sunCam.target = Vector3Add(curPlayer->eye(), curPlayer->lookdir());
 	
 	BeginTextureMode(sunMap);
 	ClearBackground({255,255,255,255});
@@ -246,27 +257,12 @@ void genReflections()
 		Begin3D(envCam, w, h);
 		
 		present();
-		player->present();
+		curPlayer->present();
 		
 		EndMode3D();
 		
 		EndTextureMode();
 	}
-}
-
-// Player view //
-void renderPlayer()
-{	
-	
-}
-
-void renderWorld()
-{
-	Begin3D(curPlayer->camera(), FWIDTH, FHEIGHT);
-	
-	present();
-	
-	EndMode3D();
 }
 
 void render()
@@ -283,14 +279,19 @@ void render()
 	shader.attach("sunProj", sunProj);
 	
 	shader.attach("sunColor", &sunColor, SHADER_UNIFORM_VEC4);
-	shader.attach("sunDir", &sunCam.position, SHADER_UNIFORM_VEC3);
+	vec3 sunDir = Vector3Subtract(sunCam.position, sunCam.target);
+	shader.attach("sunDir", &sunDir, SHADER_UNIFORM_VEC3);
 	shader.attach("shadowMap", sunMap.depth, GL_TEXTURE_2D);
 	
 	shader.attach("eye", &curCam->position, SHADER_UNIFORM_VEC3);
 	
 	BeginTextureMode(frame);
 	ClearBackground({0,0,0,255});
-	renderWorld();
+	
+	Begin3D(curPlayer->camera(), FWIDTH, FHEIGHT);
+	present();
+	EndMode3D();
+	
 	EndTextureMode();
 	
 	BeginTextureMode(Player::frame);

@@ -55,7 +55,7 @@ float calcShadow()
 {
 	float shadow = 1.0;
 	
-	float bias = 0.0004;
+	const float bias = 0.0004;
 	
 	vec3 pos = (fragSun.xyz / fragSun.w) * 0.5 + 0.5;
 	
@@ -73,7 +73,8 @@ float calcShadow()
 	if (dist >= 0)
 	{
 		shadow = ambient;
-		shadow += (dist * ambient * 2); // shadow level decreases with distance from surface
+		shadow += ((zcam / zsun) - 1) / 5;
+		shadow = min(shadow, max(ambient, 1-ambient-ambient));
 	}
 	else
 	{
