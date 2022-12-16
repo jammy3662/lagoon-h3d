@@ -25,10 +25,11 @@ int ghostCt; // spectators
 
 Player players[LOBBY_MAX];
 Player* player;
+Player* curPlayer;
 
 Stage map;
 
-Camera* activeCam;
+Camera* curCam;
 
 // environment map camera
 Camera envCam;
@@ -67,12 +68,12 @@ void pause(int p)
 
 void init()
 {
+	nearClip = 0.01;
 	farClip = 100;
 	
 	surfaceShader = LoadShaderFromMemory(mainvsShaderCode, mainfsShaderCode);
 	depthShader = LoadShaderFromMemory(depthvsShaderCode, depthfsShaderCode);
 	envShader = surfaceShader;
-	blurShader = LoadShaderFromMemory(depthvsShaderCode, blurfsShaderCode);
 	
 	frame = LoadRenderTexture(FWIDTH, FHEIGHT);
 	
@@ -89,14 +90,18 @@ void init()
 	betaCt = 0;
 	ghostCt = 0;
 	
+	// initialize players
 	for (int i = 0; i < alphaCt + betaCt + ghostCt; i++)
 	{
 		players[i] = Player_();
 	}
-	player = (players + 0); // first player in array
-	player->frame = LoadRenderTextureSharedDepth(frame);
 	
-	activeCam = &player->cam.rlcam;
+	player = (players + 0); // first player in array is main player
+	curPlayer = player; // focused player is main player (could be changed for kill cam, etc)
+	Player::frame = LoadRenderTextureSharedDepth(frame);
+	// (all players will share this render target)
+	
+	curCam = &player->camera();
 	
 	map.model = LoadModel("res/mesh/underpass.glb");
 	
@@ -125,11 +130,12 @@ void update()
 	player->update(!paused);
 	for (int i = 1; i < alphaCt + betaCt; i++)
 	{
+		// block inputs to other players
 		players[i].update(false);
 	}
 	
-	targetRay.position = player->cam.rlcam.position;
-	targetRay.direction = player->cam.lookdir;
+	targetRay.position = curCam->position;
+	targetRay.direction = curPlayer->lookdir();
 	
 	for (int i = 0; i < map.model.meshCount; i++)
 	{
@@ -139,9 +145,8 @@ void update()
 	}
 }
 
-// level geometry, map elements, etc
-// (any non-player geometry)
-void presentWorld()
+// main scene
+void present()
 {
 	DrawModel(map.model, {0,0,0}, 1, {255,255,255,255});
 	
@@ -151,16 +156,10 @@ void presentWorld()
 	if (targetCol.hit) DrawSphere(targetCol.point, 0.1, {255,0,255,255});
 	else DrawSphere (
 		Vector3Add (
-			player->cam.rlcam.position,
-			player->cam.lookdir),
+			curCam->position,
+			curPlayer->lookdir()),
 		0.1, {255,0,255,255});
 	
-	//DrawSphere(sunPos, 1, {255,255,255,255});
-}
-
-// non-player cetas
-void presentCetas()
-{
 	for (int i = 1; i < alphaCt + betaCt; i++)
 	{
 		players[i].present();
@@ -168,31 +167,49 @@ void presentCetas()
 }
 
 // Depth from sun perspective //
-void renderShadows()
+void genShadows()
 {
-	vec3 focus = Vector3Add(player->position, player->cam.lookdir);
+	shader.use(depthShader);
+	
+	vec3 reach = Vector3Scale(
+		curPlayer->lookdir(),
+		(farClip - nearClip) * 0.5);
+	
+	vec3 focus = Vector3Add(curPlayer->eye(), reach);
+	
 	sunCam.position = Vector3Add(focus, sunPos);
-	sunCam.target = focus; 
+	sunCam.target = focus;
+	
+	sunCam.position = Vector3Add(curPlayer->camera().position, sunPos);
+	sunCam.target = Vector3Add(curPlayer->eye(), curPlayer->lookdir());
 	
 	BeginTextureMode(sunMap);
 	ClearBackground({255,255,255,255});
 	
 	Begin3D(sunCam, FWIDTH, FHEIGHT);
 	
-	presentWorld();
-	presentCetas();
-// force player to draw
-//	even in first person cam
-	player->present(1);
+	//rlEnableDepthMask();
+	//glDepthFunc(GL_GREATER);
+	
+	present();
+	curPlayer->present(1);
+	// force player to draw
+	//	even in first person cam
+	
+	//rlDrawRenderBatchActive();
 	
 	EndMode3D();
 		
 	EndTextureMode();
+	
+	//glDepthFunc(GL_LESS);
 }
 
 // Bake environment to reflection map //
-void renderEnvironment()
+void genReflections()
 {
+	shader.use(envShader);
+	
 	const vec3 directions[] =
 	{
 		{-1,0,0}, // west
@@ -214,6 +231,9 @@ void renderEnvironment()
 		{0,1,0}, // north + south
 	};
 	
+	float w = envMap[0].texture.width;
+	float h = envMap[0].texture.height;
+	
 	for (int i = 0; i < 6; i++)
 	{
 		envCam.target = Vector3Add (
@@ -223,10 +243,9 @@ void renderEnvironment()
 		BeginTextureMode(envMap[i]);
 		ClearBackground({0,0,0,255});
 		
-		Begin3D(envCam, FWIDTH, FHEIGHT);
+		Begin3D(envCam, w, h);
 		
-		presentWorld();
-		presentCetas();
+		present();
 		player->present();
 		
 		EndMode3D();
@@ -238,37 +257,23 @@ void renderEnvironment()
 // Player view //
 void renderPlayer()
 {	
-	Begin3D(player->cam.rlcam, FWIDTH, FHEIGHT);
 	
-	player->present();
-	
-	EndMode3D();
 }
 
 void renderWorld()
 {
-	Begin3D(player->cam.rlcam, FWIDTH, FHEIGHT);
+	Begin3D(curPlayer->camera(), FWIDTH, FHEIGHT);
 	
-	presentWorld();
-	presentCetas();
+	present();
 	
 	EndMode3D();
 }
 
-void renderPrep()
+void render()
 {
-	shader.use(depthShader);
-	renderShadows();
+	genShadows();
+	//genReflections();
 	
-	// render surfaces without reflections
-	/*
-	shader.use(envShader);
-	renderEnvironment();
-	*/
-}
-
-void renderMain()
-{
 	// surface shader with materials
 	shader.use(surfaceShader);
 	
@@ -281,32 +286,30 @@ void renderMain()
 	shader.attach("sunDir", &sunCam.position, SHADER_UNIFORM_VEC3);
 	shader.attach("shadowMap", sunMap.depth, GL_TEXTURE_2D);
 	
-	shader.attach("eye", &player->cam.rlcam.position, SHADER_UNIFORM_VEC3);
+	shader.attach("eye", &curCam->position, SHADER_UNIFORM_VEC3);
 	
 	BeginTextureMode(frame);
 	ClearBackground({0,0,0,255});
 	renderWorld();
 	EndTextureMode();
 	
-	BeginTextureMode(player->frame);
+	BeginTextureMode(Player::frame);
 	// dont clear depth; sharing with main frame
 	glClearColor(0,0,0,0);
 	glClear(GL_COLOR_BUFFER_BIT);
-	renderPlayer();
+	
+	Begin3D(curPlayer->camera(), FWIDTH, FHEIGHT);
+	curPlayer->present();
+	EndMode3D();
+	
 	EndTextureMode();
 	
 	BeginTextureMode(frame);
 	
 	shader.use(defaultShader);
-	DrawTextureFlippedY(player->frame.texture, 0,0, { 255,255,255, (u8)((1 - player->opacity) * 255) });
+	DrawTextureFlippedY(Player::frame.texture, 0,0, { 255,255,255, (u8)((1 - curPlayer->opacity) * 255) });
 	
 	EndTextureMode();
-}
-
-void render()
-{
-	renderPrep();
-	renderMain();
 }
 
 }; // Game

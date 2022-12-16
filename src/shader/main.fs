@@ -2,7 +2,6 @@
 
 in vec4 fragPos;
 in vec4 fragSun; // frag position in sun space
-in vec4 fragGlobal;
 in vec2 fragCoord;
 in vec2 fragCoord2;
 in vec3 fragNormal;
@@ -19,15 +18,11 @@ uniform vec4 colDiffuse; // input color from raylib
 uniform sampler2D texture0; // diffuse
 uniform sampler2D texture1; // specular
 uniform sampler2D texture2; // normal
-uniform sampler2D texture3; // rough
-uniform sampler2D texture4; // occlusion
-uniform sampler2D texture5; // emission
-//uniform sampler2D texture6; // heightmap
-uniform sampler2D texture7; // cubemap
-uniform sampler2D texture8; // irradiance
 
 out vec4 finalColor;
 
+uniform float nearClip = 0.01;
+uniform float farClip = 100;
 uniform vec3 eye; // camera position
 
 uniform float ambient = 0.15; // min light
@@ -58,9 +53,9 @@ vec4 blur(sampler2D texture, vec2 uv, float kernel, float radius)
 
 float calcShadow()
 {
-	float shadow;
+	float shadow = 1.0;
 	
-	float bias = 0.001;
+	float bias = 0.0004;
 	
 	vec3 pos = (fragSun.xyz / fragSun.w) * 0.5 + 0.5;
 	
@@ -69,12 +64,22 @@ float calcShadow()
 	
 	// closest distance from sun
 	float zsun = texture2D(shadowMap, pos.xy).r;
+	zsun += bias; // avoid shadow acne
 	
-	shadow = 1.0;
+	// distance of frag from nearest surface
+	float dist = zcam - zsun;
 	
-	if (zcam >= zsun + bias)
+	// apply gradual shadow if pixel obscured from sun
+	if (dist >= 0)
 	{
 		shadow = ambient;
+		shadow += (dist * ambient * 2); // shadow level decreases with distance from surface
+	}
+	else
+	{
+		// pixels visible to sun should
+		// be unaffected by shadow
+		shadow = 1.0;
 	}
 	
 	return shadow;
@@ -95,7 +100,8 @@ vec4 calcLight(vec4 color)
 	
 	shadow = calcShadow();
 	
-	color.rgb *= sunColor.rgb * (diffuse + specular) * shadow;
+	float light = (diffuse + specular) * shadow;
+	color.rgb *= sunColor.rgb * light;
 	
 	return color;
 }

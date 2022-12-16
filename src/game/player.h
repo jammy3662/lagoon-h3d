@@ -15,8 +15,7 @@
 
 struct Player {
 
-RenderTexture frame;
-RenderTexture depth;
+static RenderTexture frame;
 
 vec3 position = {0,0,0};
 vec3 velocity = {0,0,0};
@@ -28,24 +27,10 @@ vec2 dirTarget = {0,0};
 Cam cam;
 float fov = 90;
 
-vec3 lookdir = {0,0,-1};
-
 float walkSpeed = 0.05;
 
 Model model;
-// whether this player is THE player
-// used for local-specific things
-int master = false;
 float opacity = 1;
-
-enum {
-IDLE = 0,
-WALKING,
-RUNNING,
-CETA,
-SLIDING,
-SWIMMING,
-};
 
 int idle = true;
 int fast = false;
@@ -53,22 +38,22 @@ int fast = false;
 int ceta = false;
 int shift = false; // true when in between forms
 
-inline int isWalking()
-{ return !idle && !ceta && !fast; }
-inline int isRunning()
-{ return !idle && !ceta && fast; }
-inline int isSliding()
-{ return !idle && ceta && !fast; }
-inline int isSwimming()
-{ return !idle && ceta && fast; }
-inline int isMovingHuman()
-{ return !idle && !ceta; }
-inline int isMovingCeta()
-{ return !idle && ceta; }
-inline int isIdleHuman()
-{ return idle && !ceta; }
-inline int isIdleCeta()
-{ return idle && ceta; }
+inline int isWalking()  { return !idle && !ceta && !fast; }
+inline int isRunning()  { return !idle && !ceta && fast; }
+inline int isSliding()  { return !idle && ceta && !fast; }
+inline int isSwimming() { return !idle && ceta && fast; }
+
+inline
+Camera3D& camera()
+{
+	return cam;
+}
+
+inline
+vec3& lookdir()
+{
+	return cam.lookdir;
+}
 
 void init();
 
@@ -140,13 +125,13 @@ void update(bool readInputs)
 	const float povsp = 0.5;
 	if (!cam.orbit)
 	{
-		cam.rlcam.fovy = waverage(cam.rlcam.fovy, MAX(PLAYER_FOV_MIN, fov - PLAYER_ORBIT_FOV_ADD), povsp);
+		cam.fovy = waverage(cam.fovy, MAX(PLAYER_FOV_MIN, fov - PLAYER_ORBIT_FOV_ADD), povsp);
 		cam.orbitDistance =
 			waverage(cam.orbitDistance, 0, povsp);
 	}
 	else
 	{
-		cam.rlcam.fovy = waverage(cam.rlcam.fovy, fov, povsp);
+		cam.fovy = waverage(cam.fovy, fov, povsp);
 		cam.orbitDistance = 
 			waverage(cam.orbitDistance, PLAYER_ORBIT_DISTANCE, povsp);
 	}
@@ -156,7 +141,7 @@ void update(bool readInputs)
 	opacity = 0;
 	
 	// update camera state //
-	cam.position = eye();
+	cam.anchor = eye();
 	cam.update();
 }
 
@@ -181,9 +166,16 @@ void setOrbit(int o)
 
 }; // Player //
 
+RenderTexture Player::frame;
+
 Player Player_()
 {
 	Player player;
+	
+	SetCameraMode(player.cam, CAMERA_CUSTOM);
+	player.cam.up = {0,1,0};
+	player.cam.fovy = 90;
+	player.cam.projection = CAMERA_PERSPECTIVE;
 	
 	player.setOrbit(true);
 	player.cam.orbitDistance = PLAYER_ORBIT_DISTANCE;

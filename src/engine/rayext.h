@@ -113,8 +113,12 @@ void Begin3D(Camera3D camera, float w, float h)
     rlPushMatrix();                 // Save previous matrix, which contains the settings for the 2d ortho projection
     rlLoadIdentity();               // Reset current matrix (projection)
 
-	float aspect = w / h;
-    //float aspect = (float)rlGetFramebufferWidth()/(float)rlGetFramebufferHeight();
+	float aspect;
+	
+	if (w < 0 || h < 0)
+		aspect = w / h;
+	else
+		aspect = (float)rlGetFramebufferWidth()/(float)rlGetFramebufferHeight();
 
     // NOTE: zNear and zFar values are important when computing depth buffer values
     if (camera.projection == CAMERA_PERSPECTIVE)
