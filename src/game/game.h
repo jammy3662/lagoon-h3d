@@ -6,6 +6,7 @@
 #include "../engine/define.h"
 #include "../engine/shader.h"
 
+#include "scene.h"
 #include "player.h"
 
 // internal output resolution
@@ -21,7 +22,7 @@ struct Stage
 	Model model;
 };
 
-struct Game {
+struct Game : ScenePass {
 
 // numbers of players
 int alphaCt = 1; // team a
@@ -35,6 +36,11 @@ Player* curPlayer;
 Stage map;
 
 Camera* curCam;
+
+struct ShadowScene: Scene
+{
+	
+};
 
 // environment map camera
 Camera envCam;

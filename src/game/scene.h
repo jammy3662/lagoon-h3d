@@ -6,16 +6,6 @@
 #include "../engine/define.h"
 #include "../engine/shader.h"
 
-#include "player.h"
-
-// internal output resolution
-#define FWIDTH 1920
-#define FHEIGHT 1080
-
-#define ENVMAP_DIM 100
-
-#define LOBBY_MAX 18
-
 struct Uniform {
 	int loc;
 	virtual void attach(); };
@@ -58,8 +48,8 @@ struct UniformTexture: public Uniform {
 
 struct Scene
 {
-	virtual void _render();
-}
+	virtual void _render() {}
+};
 
 struct ScenePass {
 	
@@ -83,42 +73,44 @@ int hasDepth = true;
 // if false, the depth attachment is not a texture
 // but a renderbuffer (cannot attach to shaders)
 
+Scene* scene;
+
 Array<Uniform*> attachments;
 
 void attach(char* uniform, int& _int) {
 	UniformInt* unf = (UniformInt*) malloc(sizeof(UniformInt));
-	unf->value = &_int; }
-	attachments.append(unf);
+	unf->value = &_int;
+	attachments.append(unf); }
 
 void attach(char* uniform, float& _float) {
 	UniformFloat* unf = (UniformFloat*) malloc(sizeof(UniformFloat));
-	unf->value = &_float; }
-	attachments.append(unf);
+	unf->value = &_float;
+	attachments.append(unf); }
 
 void attach(char* uniform, vec2& _vec2) {
 	UniformVec2* unf = (UniformVec2*) malloc(sizeof(UniformVec2));
-	unf->value = &_vec2; }
-	attachments.append(unf);
+	unf->value = &_vec2;
+	attachments.append(unf); }
 
 void attach(char* uniform, vec3& _vec3) {
 	UniformVec3* unf = (UniformVec3*) malloc(sizeof(UniformVec3));
-	unf->value = &_vec3; }
-	attachments.append(unf);
+	unf->value = &_vec3;
+	attachments.append(unf); }
 
 void attach(char* uniform, vec4& _vec4) {
 	UniformVec4* unf = (UniformVec4*) malloc(sizeof(UniformVec4));
-	unf->value = &_vec4; }
-	attachments.append(unf);
+	unf->value = &_vec4;
+	attachments.append(unf); }
 
 void attach(char* uniform, Matrix& _matrix) {
 	UniformMat* unf = (UniformMat*) malloc(sizeof(UniformMat));
-	unf->value = &_matrix; }
-	attachments.append(unf);
-	
-void attach(char* uniform, Texture texture) {
+	unf->value = &_matrix;
+	attachments.append(unf); }
+
+void attach(char* uniform, Texture texture, int type) {
 	UniformTexture* unf = (UniformTexture*) malloc(sizeof(UniformTexture));
-	unf->texture = texture; }
-	attachments.append(unf);
+	unf->texture = texture;
+	attachments.append(unf); }
 	
 ~ScenePass()
 {
@@ -154,7 +146,7 @@ void render()
 	
 	for (int i = 0; i < attachments.size; i++)
 	{
-		attachments[i].attach();
+		attachments[i]->attach();
 	}
 	
 	if (camera) EndMode3D();
