@@ -2,9 +2,18 @@
 
 #include <raylib.h>
 
-struct _shader {
+Shader defaultShader;
+Shader depthShader;
+
+struct _SHADER {
 	
 int textureSlot = 0;
+
+inline void init()
+{
+	defaultShader = LoadShaderFromMemory(0,0);
+	depthShader = LoadShaderFromMemory(depthvsShaderCode, depthfsShaderCode);
+}
 
 inline void use (Shader shader)
 {
@@ -52,5 +61,38 @@ inline void attach (char* loc, Texture texture, int type)
 	rlSetUniform(getLoc(loc), &idx, SHADER_UNIFORM_INT, 1);
 }
 
+// value (int location)
+inline void attach (int loc, void* value, int uniformType)
+{
+	SetShaderValue(curShader, loc, value, uniformType);
+}
+
+// matrix (int location)
+inline void attach (int loc, Matrix matrix)
+{
+	SetShaderValueMatrix(curShader, loc, matrix);
+}
+
+// array (int location)
+inline void attach (int loc, void* values, int count, int uniformType)
+{
+	SetShaderValueV(curShader, loc, values, uniformType, count);
+}
+
+// texture (int location)
+inline void attach (int loc, Texture texture, int type)
+{
+	int idx = textureSlot + 12;
+	textureSlot += 1;
+
+	rlEnableShader(curShader.id);
+	rlActiveTextureSlot(idx);
+	#if defined(GRAPHICS_API_OPENGL_11)
+		glEnable(type);
+	#endif
+	glBindTexture(type, texture.id);
+	rlSetUniform(loc, &idx, SHADER_UNIFORM_INT, 1);
+}
+
 } 
-shader;
+SHADER;

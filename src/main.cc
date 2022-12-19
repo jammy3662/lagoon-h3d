@@ -24,21 +24,29 @@ LOG_NONE            // Disable logging
 
 void drawFrame(Texture frame, Color tint)
 {
-	shader.use(defaultShader);
+	SHADER.use(defaultShader);
 	DrawTexturePro(frame, Rectangle(0,0, frame.width, -frame.height), Rectangle(0,0, wwidth, wheight), {0,0}, 0, tint);
 }
+
+Shader cubemapShader; // for previewing cubemap
 
 int main(int argc, char** argv)
 {
 	int running = true;
 	
 	SetTraceLogLevel(4);
+	//SetTraceLogLevel(7);
 	
 	InitWindow(1280, 720, "sigh");
 	SetTargetFPS(60);
 	SetExitKey(0);
 	
-	defaultShader = curShader = LoadShader(0,0);
+	SHADER.init();
+	
+	// fallback in case nothing
+	// else sets this before
+	// drawing for some reason
+	curShader = defaultShader;
 	
 	Game game;
 	game.init();
@@ -65,6 +73,8 @@ int main(int argc, char** argv)
 		
 		drawFrame(game.frame.texture, {255,255,255,255});
 		if (test) drawFrame(game.sunMap.depth, {255,255,255,255});
+		
+		//drawFrame(game.envMap[2].texture, {255,255,255,255});
 		
 		EndDrawing();
 	}

@@ -1,5 +1,10 @@
 #version 330
 
+/*
+Render paint on geometry surfaces from 3d octree texture
+Manipulated by CPU and sent to shader as uniform
+*/
+
 in vec4 fragPos;
 in vec4 fragSun; // frag position in sun space
 in vec2 fragCoord;
@@ -13,11 +18,6 @@ uniform mat4 matView;
 uniform mat4 matProjection;
 uniform mat4 matModel;
 uniform mat4 matNormal;
-
-uniform vec4 colDiffuse; // input color from raylib
-uniform sampler2D texture0; // diffuse
-uniform sampler2D texture1; // specular
-uniform sampler2D texture2; // normal
 
 out vec4 finalColor;
 
@@ -35,9 +35,21 @@ uniform sampler2D shadowMap;
 
 uniform samplerCube reflMap;
 
+uniform sampler3D paintMap; // paint octree structure
+
+float getOctree()
+{
+	
+}
+
+float getPaint()
+{
+	
+}
+
 vec4 calcReflection(vec4 color)
 {
-	const float refl = 0.1; // reflectiveness
+	const float refl = 0; // reflectiveness
 	
 	vec3 viewv = normalize(fragPos.xyz - eye);
 	vec3 reflv = reflect(viewv, fragNormal);
@@ -51,7 +63,7 @@ float calcShadow()
 {
 	float shadow = 1.0;
 	
-	const float bias = 0.0001;
+	const float bias = 0.0004;
 	
 	vec3 pos = (fragSun.xyz / fragSun.w) * 0.5 + 0.5;
 	
@@ -93,7 +105,7 @@ vec4 calcLight(vec4 color)
 	vec3 viewv = normalize(eye - fragPos.xyz);
 	vec3 halfv = normalize(lightv + viewv);
 	vec3 reflv = reflect(fragNormal, halfv);
-	specular = max(pow(dot(halfv, reflv), 16), 0) * 0.9;
+	specular = max(pow(dot(halfv, reflv), 16), 0) * 0.4;
 	
 	shadow = calcShadow();
 	

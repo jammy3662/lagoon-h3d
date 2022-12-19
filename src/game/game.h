@@ -1,5 +1,8 @@
 #pragma once
 
+#include "../compile/SHADER.c"
+#include "../compile/TEXTURE.c"
+
 #include "../engine/define.h"
 #include "../engine/shader.h"
 
@@ -9,7 +12,7 @@
 #define FWIDTH 1920
 #define FHEIGHT 1080
 
-#define ENVMAP_DIM 10
+#define ENVMAP_DIM 100
 
 #define LOBBY_MAX 18
 
@@ -21,9 +24,9 @@ struct Stage
 struct Game {
 
 // numbers of players
-int alphaCt; // team a
-int betaCt; // team b
-int ghostCt; // spectators
+int alphaCt = 1; // team a
+int betaCt = 0;  // team b
+int ghostCt = 0; // spectators
 
 Player players[LOBBY_MAX];
 Player* player;
@@ -45,15 +48,15 @@ float sunHeight = 45 * DEG2RAD; // pitch
 float sunAngle = 225 * DEG2RAD; // pivot
 
 Shader surfaceShader; // surface shader (pbr)
-Shader depthShader;
 Shader envShader; // environment map
-Shader blurShader;
+Shader fluidShader;
 
 RenderTexture frame; // final output
+RenderTexture fluidFrame;
 RenderTexture sunMap;
 
 // environment map
-RenderTexture envMap[6];
+RenderTexture reflMap;
 
 Ray targetRay;
 RayCollision targetCol;
@@ -75,17 +78,17 @@ void init()
 	
 	surfaceShader = LoadShaderFromMemory(mainvsShaderCode, mainfsShaderCode);
 	depthShader = LoadShaderFromMemory(depthvsShaderCode, depthfsShaderCode);
-	envShader = surfaceShader;
+	envShader = LoadShaderFromMemory(mainvsShaderCode, envfsShaderCode);
+	fluidShader = LoadShaderFromMemory(mainvsShaderCode, fluidfsShaderCode);
 	
 	frame = LoadRenderTexture(FWIDTH, FHEIGHT);
+	fluidFrame = LoadRenderTextureDepth(FWIDTH, FHEIGHT);
+	Player::frame = LoadRenderTextureSharedDepth(frame); // (all players will share this render target)
 	
 	// double frame resolution for clarity at distances
-	sunMap = LoadRenderTextureWithDepthTexture(FWIDTH*2, FHEIGHT*2);
+	sunMap = LoadRenderTextureDepth(FWIDTH*2, FHEIGHT*2);
 	
-	for (int i = 0; i < 6; i++)
-	{
-		envMap[i] = LoadRenderTexture(ENVMAP_DIM, ENVMAP_DIM);
-	}
+	reflMap = LoadRenderTexture(ENVMAP_DIM, ENVMAP_DIM*6);
 	
 	// TODO: TESTING ONLY!
 	alphaCt = 1;
@@ -93,16 +96,13 @@ void init()
 	ghostCt = 0;
 	
 	// initialize players
+	player = (players + 0); // first player in array is main player
 	for (int i = 0; i < alphaCt + betaCt + ghostCt; i++)
 	{
 		players[i] = Player_();
 	}
 	
-	player = (players + 0); // first player in array is main player
 	curPlayer = player; // focused player is main player (could be changed for kill cam, etc)
-	Player::frame = LoadRenderTextureSharedDepth(frame);
-	// (all players will share this render target)
-	
 	curCam = &player->camera();
 	
 	map.model = LoadModel("res/mesh/underpass.glb");
@@ -182,7 +182,7 @@ void present()
 // Depth from sun perspective //
 void genShadows()
 {
-	shader.use(depthShader);
+	SHADER.use(depthShader);
 	
 	vec3 reach = Vector3Scale(
 		curPlayer->lookdir(),
@@ -219,31 +219,38 @@ void genShadows()
 // Bake environment to reflection map //
 void genReflections()
 {
-	shader.use(envShader);
+	SHADER.use(envShader);
+	
+	SHADER.attach("sunColor", &sunColor, SHADER_UNIFORM_VEC4);
+	vec3 sunDir = Vector3Subtract(sunCam.position, sunCam.target);
+	SHADER.attach("sunDir", &sunDir, SHADER_UNIFORM_VEC3);
+	SHADER.attach("eye", &curCam->position, SHADER_UNIFORM_VEC3);
 	
 	const vec3 directions[] =
 	{
-		{-1,0,0}, // west
-		{ 1,0,0}, // east
 		{0, 1,0}, // top
 		{0,-1,0}, // bottom
 		{0,0,-1}, // north
 		{0,0, 1}, // south
+		{ 1,0,0}, // east
+		{-1,0,0}, // west
 	};
-	// (this follows raylib's format)
 	
 	// change the up direction
 	// to avoid gimbal lock
 	// when facing up and down
 	const vec3 updirs[] = 
 	{
-		{0,1,0}, // west + east
 		{1,0,0}, // top + bottom
 		{0,1,0}, // north + south
+		{0,1,0}, // east + west
 	};
 	
-	float w = envMap[0].texture.width;
-	float h = envMap[0].texture.height;
+	
+	float w = reflMap.texture.width;
+	float h = reflMap.texture.height;
+	
+	envCam.position = curPlayer->camera().position;
 	
 	for (int i = 0; i < 6; i++)
 	{
@@ -251,7 +258,7 @@ void genReflections()
 			envCam.position, directions[i]);
 		envCam.up = updirs[i/2];
 		
-		BeginTextureMode(envMap[i]);
+		BeginTextureMode(reflMap);
 		ClearBackground({0,0,0,255});
 		
 		Begin3D(envCam, w, h);
@@ -265,25 +272,62 @@ void genReflections()
 	}
 }
 
+// draw fluid point sprites;
+// blur depth image to generate
+// interpolated fluid surface
+// in screen space
+void genFluid()
+{
+	SHADER.use(fluidShader);
+	
+	BeginTextureMode(fluidFrame);
+	ClearBackground({0,0,0,255});
+	
+	//
+	// TODO: draw a bunch of quads corresponding
+	// to the positions of each fluid particle
+	//
+	
+	float time = GetTime();
+	int t = *(float*)& time;
+	srand(t);
+	
+	for (int i = 0; i < 20; i++)
+	{
+		vec3 reach = Vector3Scale(curPlayer->lookdir(), 0.1);
+		vec3 target = Vector3Add(curPlayer->eye(), reach);
+		
+		vec3 rndOffset = {(rand()%1000)/500.0, (rand()%250)/125.0, (rand()%1000)/500.0};
+		vec3 position = Vector3Add(target, rndOffset);
+		
+		DrawBillboardXY(position, {0.1,0.1}, *curCam);
+	}
+	
+	EndTextureMode();
+}
+
 void render()
 {
 	genShadows();
 	//genReflections();
+	genFluid();
 	
 	// surface shader with materials
-	shader.use(surfaceShader);
+	SHADER.use(surfaceShader);
 	
 	Matrix sunView = MatrixLookAt(sunCam.position, sunCam.target, sunCam.up);
 	Matrix sunProj = MatrixProjection(sunCam, FWIDTH, FHEIGHT);
-	shader.attach("sunView", sunView);
-	shader.attach("sunProj", sunProj);
+	SHADER.attach("sunView", sunView);
+	SHADER.attach("sunProj", sunProj);
 	
-	shader.attach("sunColor", &sunColor, SHADER_UNIFORM_VEC4);
+	SHADER.attach("sunColor", &sunColor, SHADER_UNIFORM_VEC4);
 	vec3 sunDir = Vector3Subtract(sunCam.position, sunCam.target);
-	shader.attach("sunDir", &sunDir, SHADER_UNIFORM_VEC3);
-	shader.attach("shadowMap", sunMap.depth, GL_TEXTURE_2D);
+	SHADER.attach("sunDir", &sunDir, SHADER_UNIFORM_VEC3);
+	SHADER.attach("shadowMap", sunMap.depth, GL_TEXTURE_2D);
 	
-	shader.attach("eye", &curCam->position, SHADER_UNIFORM_VEC3);
+	SHADER.attach("reflMap", reflMap.texture, GL_TEXTURE_CUBE_MAP);
+	
+	SHADER.attach("eye", &curCam->position, SHADER_UNIFORM_VEC3);
 	
 	BeginTextureMode(frame);
 	ClearBackground({0,0,0,255});
@@ -307,8 +351,10 @@ void render()
 	
 	BeginTextureMode(frame);
 	
-	shader.use(defaultShader);
+	SHADER.use(defaultShader);
+	
 	DrawTextureFlippedY(Player::frame.texture, 0,0, { 255,255,255, (u8)((1 - curPlayer->opacity) * 255) });
+	//DrawTextureFlippedY(fluidFrame.depth, 0,0, {255,255,255,255});
 	
 	EndTextureMode();
 }

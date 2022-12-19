@@ -45,7 +45,7 @@ RenderTexture2D LoadRenderTextureSharedDepth(RenderTexture2D source)
     return target;
 }
 
-RenderTexture2D LoadRenderTextureWithDepthTexture(int width, int height)
+RenderTexture2D LoadRenderTextureDepth(int width, int height)
 {
     RenderTexture2D target = {0};
 
@@ -148,6 +148,44 @@ void Begin3D(Camera3D camera, float w, float h)
     rlEnableDepthTest();            // Enable DEPTH_TEST for 3D
 }
 
+void DrawBillboardXY(Vector3 pos, Vector2 size, Camera3D cam)
+{
+	rlCheckRenderBatchLimit(10);
+	rlPushMatrix();
+
+	// get the camera view matrix
+	Matrix mat = MatrixLookAt(cam.position, cam.target, cam.up);
+	// peel off just the rotation
+	Quaternion quat = QuaternionFromMatrix(mat);
+	mat = QuaternionToMatrix(quat);
+
+	// apply just the rotation
+	rlMultMatrixf(MatrixToFloat((mat)));
+
+	// translate backwards in the inverse rotated matrix to put the item where it goes
+	pos = Vector3Transform(pos, MatrixInvert(mat));
+	rlTranslatef(pos.x, pos.y, pos.z);
+
+	// draw the billboard
+	float width = size.x/2;
+	float height = size.y/2;
+
+	Color color = {255,255,255,255};
+
+	// draw quad
+	rlBegin(RL_QUADS);
+	rlColor4ub(color.r, color.g, color.b, color.a);
+	// Front Face
+	rlNormal3f(0.0f, 0.0f, 1.0f);                  // Normal Pointing Towards Viewer
+	rlTexCoord2f(0.0f, 1.0f); rlVertex3f(-width, -height, 0);  // Bottom Left Of The Texture and Quad
+	rlTexCoord2f(1.0f, 1.0f); rlVertex3f(+width, -height, 0);  // Bottom Right Of The Texture and Quad
+	rlTexCoord2f(1.0f, 0.0f); rlVertex3f(+width, +height, 0);  // Top Right Of The Texture and Quad
+	rlTexCoord2f(0.0f, 0.0f); rlVertex3f(-width, +height, 0);  // Top Left Of The Texture and Quad
+
+	rlEnd();
+	rlPopMatrix();
+}
+
 void DrawBillboardXY(Texture tx, Vector3 pos, Vector2 size, Camera3D cam)
 {
 	rlCheckRenderBatchLimit(10);
@@ -215,6 +253,25 @@ Texture LoadTexture3D(int width, int height, int depth, uint8* texelbuffer)
 	return ret;
 }
 
+TextureCubemap LoadCubeMap(int width, int height)
+{
+	TextureCubemap ret;
+	
+	ret.width = width;
+	ret.height = height; // height of 1 face
+	ret.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+	ret.mipmaps = 0;
+	
+	int texelCount = width * (height*6);
+	const int channels = 4; // rgba, 4 channels
+	char* texels = (char*) malloc(texelCount * channels * sizeof(char));
+	
+	ret.id = rlLoadTextureCubemap(texels, ret.width, ret.format); 
+	if (ret.id == 0) fprintf(stderr, "CUBEMAP ERR: could not load\n");
+	
+	return ret;
+}
+
 TextureCubemap LoadTextureCubeMap(Texture top, Texture bottom, Texture north, Texture south, Texture east, Texture west)
 {
 	TextureCubemap ret;
@@ -222,7 +279,7 @@ TextureCubemap LoadTextureCubeMap(Texture top, Texture bottom, Texture north, Te
 	// Convert image data to 6 faces in a vertical column, that's the optimum layout for loading
 	Image map = GenImageColor(top.width, top.height*6, MAGENTA);
 	ImageFormat(&map, top.format);
-
+	
 	Texture faces[] = {west, east, top, bottom, north, south};
 	
 	for (int i = 0; i < 6; i++)

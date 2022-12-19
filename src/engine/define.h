@@ -54,6 +54,4 @@ vec2 waverage(vec2 from, vec2 to, float weight)
 	);
 }
 
-Shader defaultShader;
-
 void drawFrame(Texture frame, Color tint);

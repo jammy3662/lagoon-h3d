@@ -9,9 +9,9 @@
 #define PLAYER_FOV_MIN 30
 #define PLAYER_FOV_MAX 180
 
-#define PLAYER_ORBIT_FOV_ADD 5
+#define PLAYER_ORBIT_FOV_ADD 15
 
-#define PLAYER_ORBIT_DISTANCE 1.5
+#define PLAYER_ORBIT_DISTANCE (PLAYER_HEIGHT * 1.3)
 
 struct Player {
 
@@ -125,7 +125,7 @@ void update(bool readInputs)
 	const float povsp = 0.5;
 	if (!cam.orbit)
 	{
-		cam.fovy = waverage(cam.fovy, MAX(PLAYER_FOV_MIN, fov - PLAYER_ORBIT_FOV_ADD), povsp);
+		cam.fovy = waverage(cam.fovy, MAX(PLAYER_FOV_MIN, fov + PLAYER_ORBIT_FOV_ADD), povsp);
 		cam.orbitDistance =
 			waverage(cam.orbitDistance, 0, povsp);
 	}
@@ -138,7 +138,7 @@ void update(bool readInputs)
 	
 	opacity = cam.ry / (M_PI);
 	opacity += 0.5;
-	opacity = 0;
+	//opacity = 0;
 	
 	// update camera state //
 	cam.anchor = eye();
@@ -184,15 +184,17 @@ Player Player_()
 		PLAYER_ORBIT_DISTANCE * 0.22,
 		PLAYER_ORBIT_DISTANCE * 0};
 	
-	Mesh tempMesh = GenMeshCube (
+	Mesh tempMesh;
+	
+	tempMesh = GenMeshCube (
 		PLAYER_HEIGHT*0.5,
 		PLAYER_HEIGHT,
 		PLAYER_HEIGHT*0.5
 	);
+	
+	//tempMesh = GenMeshCylinder(PLAYER_HEIGHT * 0.5, PLAYER_HEIGHT, 16);
+	
 	player.model = LoadModelFromMesh(tempMesh);
-	
-	Shader sh = LoadShaderFromMemory(mainvsShaderCode,mainfsShaderCode);
-	
 	player.update(false);
 	
 	return player;

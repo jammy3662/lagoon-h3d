@@ -25,8 +25,8 @@ float dyTarget = 0;
 // 50    1/10 degree
 // 100   MAX
 // 500   1 degree
-int speedX = 50;
-int speedY = 50;
+int speedX = 40;
+int speedY = 40;
 
 // SENSITIVITY
 // ------------
@@ -38,8 +38,7 @@ int speedY = 50;
 // 50   fast
 // 70   tight
 // 90   precise
-int sensX = 80;
-int sensY = 80;
+int sens = 80;
 
 // SMOOTHING
 // ---------
@@ -50,8 +49,7 @@ int sensY = 80;
 // 50  smooth
 // 70  fluid
 // 90  drunk
-int smoothX = 70;
-int smoothY = 70;
+int smooth = 70;
 
 vec3 anchor = {0,0,0};
 
@@ -72,34 +70,30 @@ void rotate(float y, float x, float z)
 		// DEBUG //
 		if (IsKeyPressed(kup))
 		{
-			sensX = MIN(sensX + 5, 100);
-			sensY = MIN(sensY + 5, 100);
-			printf("sens: %i\n", sensX); 
+			sens = MIN(sens + 5, 100);
+			printf("sens: %i\n", sens); 
 		}
 		else if (IsKeyPressed(kdown))
 		{
-			sensX = MAX(sensX - 5, 0);
-			sensY = MAX(sensY - 5, 0);
-			printf("sens: %i\n", sensX); 
+			sens = MAX(sens - 5, 0);
+			printf("sens: %i\n", sens); 
 		}
 		
 		// DEBUG //
 		if (IsKeyPressed(kleft))
 		{
-			smoothX = MAX(smoothX - 5, 0);
-			smoothY = MAX(smoothY - 5, 0);
-			printf("smooth: %i\n", smoothX); 
+			smooth = MAX(smooth - 5, 0);
+			printf("smooth: %i\n", smooth); 
 		}
 		else if (IsKeyPressed(kright))
 		{
-			smoothX = MIN(smoothX + 5, 100);
-			smoothY = MIN(smoothY + 5, 100);
-			printf("smooth: %i\n", smoothX); 
+			smooth = MIN(smooth + 5, 100);
+			printf("smooth: %i\n", smooth); 
 		}
 	}
 	
-	calc(rx, x, dxTarget, dx, speedX, sensX, smoothX);
-	calc(ry, y, dyTarget, dy, speedY, sensY, smoothY);
+	calc(rx, x, dxTarget, dx, speedX, sens, smooth);
+	calc(ry, y, dyTarget, dy, speedY, sens, smooth);
 	
 	ry = CLAMP((float)-1.55, ry, (float)1.55);
 	rz = fmod(rz + z, 2*M_PI);
@@ -150,9 +144,3 @@ void calc(float& rotation, float& delta, float& delta2, float& delta3, int speed
 }
 
 }; // Cam
-
-float Cam::lerpAverage(float from, float to, float weight = 0.5)
-{
-	return (from * (1-weight)) + (to * (weight));
-}
-

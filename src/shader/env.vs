@@ -13,6 +13,7 @@ uniform mat4 matModel;
 uniform mat4 matNormal;
 
 out vec4 fragPos;
+out vec4 fragGlobal;
 out vec4 fragSun; // fragment position in sun space
 out vec2 fragCoord;
 out vec2 fragCoord2;
@@ -22,6 +23,8 @@ out vec4 fragColor;
 
 uniform mat4 sunView;
 uniform mat4 sunProj;
+
+uniform int face = 0;
 
 void main()
 {
@@ -38,5 +41,5 @@ void main()
 	
 	// Calculate final vertex position
 	gl_Position = mvp * vec4(vertexPosition, 1.0);
-	//gl_Position = sunProj * sunView * matModel * vec4(vertexPosition, 1.0);
+	gl_Position.y += face/6;
 }
