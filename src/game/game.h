@@ -39,9 +39,12 @@ Camera* curCam;
 
 // environment map camera
 Camera envCam;
+
 // shadow map camera
 Camera sunCam;
-
+Matrix sunView;
+Matrix sunProj;
+vec3 sunDir;
 vec3 sunPos;
 vec4 sunColor = {1,1,1,1};
 float sunDist = 20;
@@ -61,8 +64,6 @@ RenderTexture reflMap;
 
 Ray targetRay;
 RayCollision targetCol;
-
-Scene shadows;
 
 int paused = false;
 
@@ -124,14 +125,6 @@ void init()
 	envCam.up = {0,1,0};
 	envCam.projection = CAMERA_PERSPECTIVE;
 	envCam.fovy = 65;
-	
-	shadows = Scene::create();
-	shadows.background = {1,1,1,1};
-	shadows.clearColor = true;
-	shadows.clearDepth = true;
-	
-	//Scene final = Scene::create();
-	//final.attach("sunView", sunView);
 	
 	pause(true);
 }
@@ -204,7 +197,7 @@ void genShadows()
 	sunCam.target = focus;
 	
 	{
-		SceneHandle shadowPass = shadows.render(depthShader, sunCam, &sunMap);
+		RasterPass shadowPass = Raster(depthShader, sunCam, &sunMap, RasterClear::CLEAR_ALL, {1,1,1,1});
 		
 		//rlEnableDepthMask();
 		//glDepthFunc(GL_GREATER);
@@ -316,42 +309,39 @@ void render()
 	//genReflections();
 	//genFluid();
 	
-	// surface shader with materials
-	SHADER.use(surfaceShader);
+/*
+	TODO: something about this setup causes
+	the shader uniforms to not bind correctly;
+	shadow map produces correct output while
+	main render is corrupted (missing texture) 
+*/
 	
-	Matrix sunView = MatrixLookAt(sunCam.position, sunCam.target, sunCam.up);
-	Matrix sunProj = MatrixProjection(sunCam, FWIDTH, FHEIGHT);
-	SHADER.attach("sunView", sunView);
-	SHADER.attach("sunProj", sunProj);
+	{
+		RasterPass mainPass = Raster(surfaceShader, *curCam, &frame, RasterClear::CLEAR_ALL, {0,0,0,1});
+		
+		SHADER.attach("sunView", sunView);
+		SHADER.attach("sunProj", sunProj);
+		SHADER.attach("sunColor", &sunColor);
+		SHADER.attach("sunDir", &sunDir);
+		SHADER.attach("shadowMap", sunMap.depth, GL_TEXTURE_2D);
+		SHADER.attach("reflMap", reflMap.texture, GL_TEXTURE_CUBE_MAP);
+		SHADER.attach("eye", &curCam->position);
+		
+		present();
+	}
 	
-	SHADER.attach("sunColor", &sunColor, SHADER_UNIFORM_VEC4);
-	vec3 sunDir = Vector3Subtract(sunCam.position, sunCam.target);
-	SHADER.attach("sunDir", &sunDir, SHADER_UNIFORM_VEC3);
-	SHADER.attach("shadowMap", sunMap.depth, GL_TEXTURE_2D);
-	
-	SHADER.attach("reflMap", reflMap.texture, GL_TEXTURE_CUBE_MAP);
-	
-	SHADER.attach("eye", &curCam->position, SHADER_UNIFORM_VEC3);
-	
-	BeginTextureMode(frame);
-	ClearBackground({0,0,0,255});
-	
-	Begin3D(curPlayer->camera(), FWIDTH, FHEIGHT);
-	present();
-	EndMode3D();
-	
-	EndTextureMode();
-	
-	BeginTextureMode(Player::frame);
-	// dont clear depth; sharing with main frame
-	glClearColor(0,0,0,0);
-	glClear(GL_COLOR_BUFFER_BIT);
-	
-	Begin3D(curPlayer->camera(), FWIDTH, FHEIGHT);
-	curPlayer->present();
-	EndMode3D();
-	
-	EndTextureMode();
+	{
+		// transparent background for layering;
+		// leave depth buffer as-is to clip
+		// against rest of scene geometry
+		RasterPass mainPlayerPass = Raster(*curCam, &Player::frame, RasterClear::CLEAR_COLOR, {0,1,0,1});
+		
+		// dont set shader uniforms;
+		// they are still there from
+		// the last pass
+		
+		curPlayer->present();
+	}
 	
 	BeginTextureMode(frame);
 	

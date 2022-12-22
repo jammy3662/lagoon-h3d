@@ -112,4 +112,5 @@ void main()
 	color = calcReflection(color);
 	
 	finalColor = color;
+	//finalColor = vec4(vec3(eye), 1.0);
 }
