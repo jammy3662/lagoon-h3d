@@ -37,11 +37,6 @@ Stage map;
 
 Camera* curCam;
 
-struct ShadowScene: Scene
-{
-	
-};
-
 // environment map camera
 Camera envCam;
 // shadow map camera
@@ -66,6 +61,8 @@ RenderTexture reflMap;
 
 Ray targetRay;
 RayCollision targetCol;
+
+Scene shadows;
 
 int paused = false;
 
@@ -128,6 +125,14 @@ void init()
 	envCam.projection = CAMERA_PERSPECTIVE;
 	envCam.fovy = 65;
 	
+	shadows = Scene::create();
+	shadows.background = {1,1,1,1};
+	shadows.clearColor = true;
+	shadows.clearDepth = true;
+	
+	//Scene final = Scene::create();
+	//final.attach("sunView", sunView);
+	
 	pause(true);
 }
 
@@ -188,8 +193,6 @@ void present()
 // Depth from sun perspective //
 void genShadows()
 {
-	SHADER.use(depthShader);
-	
 	vec3 reach = Vector3Scale(
 		curPlayer->lookdir(),
 		(farClip - nearClip) * 0.1);
@@ -200,24 +203,19 @@ void genShadows()
 	sunCam.position = Vector3Add(focus, sunPos);
 	sunCam.target = focus;
 	
-	BeginTextureMode(sunMap);
-	ClearBackground({255,255,255,255});
-	
-	Begin3D(sunCam, FWIDTH*2, FHEIGHT*2);
-	
-	//rlEnableDepthMask();
-	//glDepthFunc(GL_GREATER);
-	
-	present();
-	curPlayer->present(1);
-	// force player to draw
-	//	even in first person cam
-	
-	//rlDrawRenderBatchActive();
-	
-	EndMode3D();
+	{
+		SceneHandle shadowPass = shadows.render(depthShader, sunCam, &sunMap);
 		
-	EndTextureMode();
+		//rlEnableDepthMask();
+		//glDepthFunc(GL_GREATER);
+		
+		present();
+		curPlayer->present(1);
+		// force player to draw
+		// even in first person cam
+		
+		//rlDrawRenderBatchActive();
+	}
 	
 	//glDepthFunc(GL_LESS);
 }
@@ -316,7 +314,7 @@ void render()
 {
 	genShadows();
 	//genReflections();
-	genFluid();
+	//genFluid();
 	
 	// surface shader with materials
 	SHADER.use(surfaceShader);

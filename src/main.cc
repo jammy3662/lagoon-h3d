@@ -6,6 +6,8 @@
 #include "../compile/SHADER.c"
 #include "../compile/TEXTURE.c"
 
+#define LAGOON_DEBUG
+
 #include "engine/define.h"
 #include "engine/rayext.h"
 

@@ -46,80 +46,96 @@ struct UniformTexture: public Uniform {
 	inline void attach() {
 		SHADER.attach(loc, texture, type); }};
 
-struct Scene
-{
-	virtual void _render() {}
-};
-
-struct ScenePass {
+struct Scene {
 	
 static int _nextId;
-int id;
+int _id;
 
-ScenePass()
+Scene()
 {
-	id = _nextId;
-	_nextId += 1;
+	
 }
 
-Camera* camera = 0;
-Shader* shader = 0;
-RenderTexture* frame = 0;
-
-vec4 background; // background color
+vec4 background = {1,1,1,1}; // background color
 int clearColor = true;
 int clearDepth = true;
-int hasDepth = true;
-// if false, the depth attachment is not a texture
-// but a renderbuffer (cannot attach to shaders)
 
-Scene* scene;
-
-Array<Uniform*> attachments;
-
-void attach(char* uniform, int& _int) {
-	UniformInt* unf = (UniformInt*) malloc(sizeof(UniformInt));
-	unf->value = &_int;
-	attachments.append(unf); }
-
-void attach(char* uniform, float& _float) {
-	UniformFloat* unf = (UniformFloat*) malloc(sizeof(UniformFloat));
-	unf->value = &_float;
-	attachments.append(unf); }
-
-void attach(char* uniform, vec2& _vec2) {
-	UniformVec2* unf = (UniformVec2*) malloc(sizeof(UniformVec2));
-	unf->value = &_vec2;
-	attachments.append(unf); }
-
-void attach(char* uniform, vec3& _vec3) {
-	UniformVec3* unf = (UniformVec3*) malloc(sizeof(UniformVec3));
-	unf->value = &_vec3;
-	attachments.append(unf); }
-
-void attach(char* uniform, vec4& _vec4) {
-	UniformVec4* unf = (UniformVec4*) malloc(sizeof(UniformVec4));
-	unf->value = &_vec4;
-	attachments.append(unf); }
-
-void attach(char* uniform, Matrix& _matrix) {
-	UniformMat* unf = (UniformMat*) malloc(sizeof(UniformMat));
-	unf->value = &_matrix;
-	attachments.append(unf); }
-
-void attach(char* uniform, Texture texture, int type) {
-	UniformTexture* unf = (UniformTexture*) malloc(sizeof(UniformTexture));
-	unf->texture = texture;
-	attachments.append(unf); }
-	
-~ScenePass()
+static Scene create()
 {
-	for (int i = 0; i < attachments.size; i++)
-	{ free(attachments[i]); }
+	Scene scn;
+	
+	scn._id = _nextId;
+	_nextId += 1;
+	scn._attachments = {.data = 0, .cap = 0, .size = 0};
+	
+	return scn;
 }
 
-void render()
+Array<Uniform*> _attachments;
+
+void attach(char* uniform, int& _int) {
+	UniformInt* unif = (UniformInt*) malloc(sizeof(UniformInt));
+	unif->value = &_int;
+	_attachments.append(unif); }
+
+void attach(char* uniform, float& _float) {
+	UniformFloat* unif = (UniformFloat*) malloc(sizeof(UniformFloat));
+	unif->value = &_float;
+	_attachments.append(unif); }
+
+void attach(char* uniform, vec2& _vec2) {
+	UniformVec2* unif = (UniformVec2*) malloc(sizeof(UniformVec2));
+	unif->value = &_vec2;
+	_attachments.append(unif); }
+
+void attach(char* uniform, vec3& _vec3) {
+	UniformVec3* unif = (UniformVec3*) malloc(sizeof(UniformVec3));
+	unif->value = &_vec3;
+	_attachments.append(unif); }
+
+void attach(char* uniform, vec4& _vec4) {
+	UniformVec4* unif = (UniformVec4*) malloc(sizeof(UniformVec4));
+	unif->value = &_vec4;
+	_attachments.append(unif); }
+
+void attach(char* uniform, Matrix& _matrix) {
+	UniformMat* unif = (UniformMat*) malloc(sizeof(UniformMat));
+	unif->value = &_matrix;
+	_attachments.append(unif); }
+
+void attach(char* uniform, Texture texture, int type) {
+	UniformTexture* unif = (UniformTexture*) malloc(sizeof(UniformTexture));
+	unif->texture = texture;
+	_attachments.append(unif); }
+	
+~Scene()
 {
+	for (int i = 0; i < _attachments.size; i++)
+	{ free(_attachments[i]); }
+}
+
+struct Handle 
+{
+	RenderTexture* frame = 0;
+	~Handle()
+	{
+		EndMode3D();
+		// always validate here because null
+		// means to SKIP binding the framebuffer
+		if (frame) EndTextureMode();
+	}
+};
+
+Handle render(Shader shader, Camera3D camera, RenderTexture* frame)
+{
+	SHADER.use(shader);
+	for (int i = 0; i < _attachments.size; i++)
+	{
+		_attachments[i]->attach();
+	}
+
+	// always validate here because null
+	// means to SKIP binding the framebuffer
 	if (frame) BeginTextureMode(*frame);
 	
 	if (clearColor || clearDepth)
@@ -130,30 +146,13 @@ void render()
 			(GL_DEPTH_BUFFER_BIT * clearDepth));
 	}
 	
-	if (shader) SHADER.use(*shader);
-	else
-	{
-		fprintf(stderr, "ERR: Render pass [%i] missing shader\n... Using default shader\n", id);
-		SHADER.use(defaultShader);
-	}
+	Begin3D(camera, frame->texture.width, frame->texture.height);
 	
-	if (camera) Begin3D(*camera, frame->texture.width, frame->texture.height);
-	else
-	{
-		fprintf(stderr, "ERR: Render pass [%i] missing texture\n", id);
-		return;
-	}
-	
-	for (int i = 0; i < attachments.size; i++)
-	{
-		attachments[i]->attach();
-	}
-	
-	if (camera) EndMode3D();
-	
-	if (frame) EndTextureMode();
+	return (Handle){.frame = frame};
 }
 
-} /* ScenePass */ ;
+} /* Scene */ ;
 
-int ScenePass::_nextId = 0;
+typedef Scene::Handle SceneHandle;
+
+int Scene::_nextId = 0;
