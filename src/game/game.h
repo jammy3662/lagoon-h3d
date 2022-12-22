@@ -22,7 +22,7 @@ struct Stage
 	Model model;
 };
 
-struct Game : ScenePass {
+struct Game {
 
 // numbers of players
 int alphaCt = 1; // team a
@@ -203,7 +203,7 @@ void genShadows()
 	BeginTextureMode(sunMap);
 	ClearBackground({255,255,255,255});
 	
-	Begin3D(sunCam, FWIDTH, FHEIGHT);
+	Begin3D(sunCam, FWIDTH*2, FHEIGHT*2);
 	
 	//rlEnableDepthMask();
 	//glDepthFunc(GL_GREATER);

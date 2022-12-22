@@ -53,13 +53,13 @@ struct Scene
 
 struct ScenePass {
 	
-static int nextId;
+static int _nextId;
 int id;
 
 ScenePass()
 {
-	id = nextId;
-	nextId += 1;
+	id = _nextId;
+	_nextId += 1;
 }
 
 Camera* camera = 0;
@@ -156,4 +156,4 @@ void render()
 
 } /* ScenePass */ ;
 
-int ScenePass::nextId = 0;
+int ScenePass::_nextId = 0;
