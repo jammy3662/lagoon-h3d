@@ -82,7 +82,7 @@ void init()
 	
 	surfaceShader = LoadShaderFromMemory(mainvsShaderCode, mainfsShaderCode);
 	depthShader = LoadShaderFromMemory(depthvsShaderCode, depthfsShaderCode);
-	envShader = LoadShaderFromMemory(mainvsShaderCode, envfsShaderCode);
+	envShader = LoadShaderFromMemory(envvsShaderCode, envfsShaderCode);
 	fluidShader = LoadShaderFromMemory(mainvsShaderCode, fluidfsShaderCode);
 	
 	frame = LoadRenderTexture(FWIDTH, FHEIGHT);
@@ -115,6 +115,7 @@ void init()
 	sunPos = Vector3RotateByQuaternion (
 		Vector3Scale (
 			{0,0,-1}, sunDist), sunRotQuat);
+	sunDir = sunPos;
 	
 	SetCameraMode(sunCam, CAMERA_CUSTOM);
 	sunCam.up = {0,1,0};
@@ -162,6 +163,8 @@ void update()
 		targetCol = GetRayCollisionMesh(targetRay, m, MatrixIdentity());
 		if (targetCol.hit) break;
 	}
+	
+	sunDir = Vector3Subtract(sunCam.position, sunCam.target);
 }
 
 // main scene
@@ -196,26 +199,29 @@ void genShadows()
 	sunCam.position = Vector3Add(focus, sunPos);
 	sunCam.target = focus;
 	
-	{
-		RasterPass shadowPass = Raster(depthShader, sunCam, &sunMap, RasterClear::CLEAR_ALL, {1,1,1,1});
+	BeginTextureMode(sunMap);
+	
+		glClearColor(0.2,0.2,0.2,0.2);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		//rlEnableDepthMask();
-		//glDepthFunc(GL_GREATER);
+		shuse(depthShader);
+		
+		Begin3D(sunCam, sunMap.texture.width, sunMap.texture.height);
 		
 		present();
 		curPlayer->present(1);
 		// force player to draw
 		// even in first person cam
-		
-		//rlDrawRenderBatchActive();
-	}
 	
-	//glDepthFunc(GL_LESS);
+		EndMode3D();
+		
+	EndTextureMode();
 }
 
 // Bake environment to reflection map //
 void genReflections()
 {
+	/*
 	SHADER.use(envShader);
 	
 	SHADER.attach("sunColor", &sunColor, SHADER_UNIFORM_VEC4);
@@ -267,6 +273,7 @@ void genReflections()
 		
 		EndTextureMode();
 	}
+	*/
 }
 
 // draw fluid point sprites;
@@ -275,7 +282,7 @@ void genReflections()
 // in screen space
 void genFluid()
 {
-	SHADER.use(fluidShader);
+	shuse(fluidShader);
 	
 	BeginTextureMode(fluidFrame);
 	ClearBackground({0,0,0,255});
@@ -303,49 +310,53 @@ void genFluid()
 	EndTextureMode();
 }
 
+void genSurface()
+{
+	BeginTextureMode(frame);
+	
+	shuse(surfaceShader);
+	
+	shset(surfaceShader, "sunView", sunView);
+	shset(surfaceShader, "sunProj", sunProj);
+	shset(surfaceShader, "sunColor", sunColor);
+	shset(surfaceShader, "sunDir", sunDir);
+	shset(surfaceShader, "shadowMap", sunMap.depth, GL_TEXTURE_2D);
+	shset(surfaceShader, "reflMap", reflMap.texture, GL_TEXTURE_CUBE_MAP);
+	shset(surfaceShader, "eye", curCam->position);
+	
+	glClearColor(0,0,0,1);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+	Begin3D(*curCam, frame.texture.width, frame.texture.height);
+	
+	present();
+	
+	EndMode3D();
+	EndTextureMode();
+	
+	BeginTextureMode(Player::frame);
+	
+	glClearColor(0,0,0,0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	
+	Begin3D(*curCam, Player::frame.texture.width, Player::frame.texture.height);
+	
+	curPlayer->present();
+	
+	EndMode3D();
+	EndTextureMode();
+}
+
 void render()
 {
 	genShadows();
 	//genReflections();
 	//genFluid();
-	
-/*
-	TODO: something about this setup causes
-	the shader uniforms to not bind correctly;
-	shadow map produces correct output while
-	main render is corrupted (missing texture) 
-*/
-	
-	{
-		RasterPass mainPass = Raster(surfaceShader, *curCam, &frame, RasterClear::CLEAR_ALL, {0,0,0,1});
-		
-		SHADER.attach("sunView", sunView);
-		SHADER.attach("sunProj", sunProj);
-		SHADER.attach("sunColor", &sunColor);
-		SHADER.attach("sunDir", &sunDir);
-		SHADER.attach("shadowMap", sunMap.depth, GL_TEXTURE_2D);
-		SHADER.attach("reflMap", reflMap.texture, GL_TEXTURE_CUBE_MAP);
-		SHADER.attach("eye", &curCam->position);
-		
-		present();
-	}
-	
-	{
-		// transparent background for layering;
-		// leave depth buffer as-is to clip
-		// against rest of scene geometry
-		RasterPass mainPlayerPass = Raster(*curCam, &Player::frame, RasterClear::CLEAR_COLOR, {0,1,0,1});
-		
-		// dont set shader uniforms;
-		// they are still there from
-		// the last pass
-		
-		curPlayer->present();
-	}
+	genSurface();
 	
 	BeginTextureMode(frame);
 	
-	SHADER.use(defaultShader);
+	shuse(defaultShader);
 	
 	DrawTextureFlippedY(Player::frame.texture, 0,0, { 255,255,255, (u8)((1 - curPlayer->opacity) * 255) });
 	//DrawTextureFlippedY(fluidFrame.depth, 0,0, {255,255,255,255});

@@ -6,6 +6,7 @@
 #include "../engine/define.h"
 #include "../engine/shader.h"
 
+/*
 struct RasterPass
 {
 	RenderTexture* frame = 0;
@@ -18,7 +19,7 @@ struct RasterPass
 	}
 };
 
-typedef enum /* RasterClear */
+typedef enum // RasterClear
 {
 	CLEAR_NONE = GL_NONE,
 	CLEAR_COLOR = GL_COLOR_BUFFER_BIT,
@@ -27,13 +28,14 @@ typedef enum /* RasterClear */
 	// (raylib doesnt support stencil buffer out of the box)
 } RasterClear;
 
-RasterPass Raster(Shader shader, Camera3D camera, RenderTexture* frame, RasterClear clearType, vec4 clearColor)
+RasterPass Raster(ShaderPass shader, Camera3D camera, RenderTexture* frame, RasterClear clearType, vec4 clearColor)
 {
-	SHADER.use(shader);
-
 	// always validate here because null
 	// means to SKIP binding the framebuffer
 	if (frame) BeginTextureMode(*frame);
+	
+	SHADER.use(shader.shader);
+	shader.bind();
 	
 	glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
 	glClear(clearType);
@@ -46,5 +48,15 @@ RasterPass Raster(Shader shader, Camera3D camera, RenderTexture* frame, RasterCl
 // preserves current shader and bindings
 RasterPass Raster(Camera3D camera, RenderTexture* frame, RasterClear clearType, vec4 clearColor)
 {
-	return Raster(curShader, camera, frame, clearType, clearColor);
+	// always validate here because null
+	// means to SKIP binding the framebuffer
+	if (frame) BeginTextureMode(*frame);
+	
+	glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
+	glClear(clearType);
+	
+	Begin3D(camera, frame->texture.width, frame->texture.height);
+	
+	return (RasterPass){.frame = frame};
 }
+*/

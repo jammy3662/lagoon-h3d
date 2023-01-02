@@ -5,90 +5,209 @@
 Shader defaultShader;
 Shader depthShader;
 
-struct /* SHADER */ {
+int shaderTextureSlot = 0;
+
+struct ShaderPass : public virtual Shader {
+
+void operator=(Shader _shader)
+{
+	*(Shader*)this = _shader;
+}
+
+Shader handle()
+{
+	return *(Shader*)this;
+}
+
+struct Attachment
+{
+//	typedef ShaderUniformDataType Type;
 	
-int textureSlot = 0;
+	int loc;
+	int type;
+	void* value;
+};
 
-inline void init()
+enum
 {
-	defaultShader = LoadShaderFromMemory(0,0);
-	depthShader = LoadShaderFromMemory(depthvsShaderCode, depthfsShaderCode);
-}
+	SHADER_UNIFORM_MATRIX = SHADER_UNIFORM_SAMPLER2D + 1,
+	SHADER_UNIFORM_TEXTURE2D,
+	SHADER_UNIFORM_TEXTURE3D,
+	SHADER_UNIFORM_TEXTURE_CUBE,
+};
 
-inline void use (Shader shader)
-{
-	curShader = shader;
-	textureSlot = 0;
-}
+Array<Attachment> uniforms;
 
-// get uniform location by name
-inline int getLoc (char* name)
+void _attachValue(char* loc, void* value, int type)
 {
-	return GetShaderLocation(curShader, name);
-}
-
-// value
-inline void attach (char* loc, void* value, int uniformType)
-{
-	SetShaderValue(curShader, getLoc(loc), value, uniformType);
+	Attachment uniform = {
+		.loc = GetShaderLocation(handle(), loc),
+		.value = value,
+		.type = type
+	};
+	
+	uniforms.append(uniform);
 }
 
 // int
-void attach (char* loc, int* value)
+inline void attach(char* loc, int* int_)
 {
-	SetShaderValue(curShader, getLoc(loc), value, SHADER_UNIFORM_INT);
+	_attachValue(loc, int_, SHADER_UNIFORM_INT);
 }
 
 // float
-void attach (char* loc, float* value)
+inline void attach(char* loc, float* float_)
 {
-	SetShaderValue(curShader, getLoc(loc), value, SHADER_UNIFORM_FLOAT);
+	_attachValue(loc, float_, SHADER_UNIFORM_FLOAT);
 }
 
 // vec2
-void attach (char* loc, vec2* value)
+void attach (char* loc, vec2* vec2_)
 {
-	SetShaderValue(curShader, getLoc(loc), value, SHADER_UNIFORM_VEC2);
+	_attachValue(loc, vec2_, SHADER_UNIFORM_VEC2);
 }
 
 // vec3
-void attach (char* loc, vec3* value)
+void attach (char* loc, vec3* vec3_)
 {
-	SetShaderValue(curShader, getLoc(loc), value, SHADER_UNIFORM_VEC3);
+	_attachValue(loc, vec3_, SHADER_UNIFORM_VEC3);
 }
 
 // vec4
-void attach (char* loc, vec4* value)
+void attach (char* loc, vec4* vec4_)
 {
-	SetShaderValue(curShader, getLoc(loc), value, SHADER_UNIFORM_VEC4);
+	_attachValue(loc, vec4_, SHADER_UNIFORM_VEC4);
 }
 
 // matrix
-void attach (char* loc, Matrix matrix)
+void attach (char* loc, Matrix* matrix_)
 {
-	SetShaderValueMatrix(curShader, getLoc(loc), matrix);
-}
-
-// array
-void attach (char* loc, void* values, int count, int uniformType)
-{
-	SetShaderValueV(curShader, getLoc(loc), values, uniformType, count);
+	_attachValue(loc, matrix_, SHADER_UNIFORM_MATRIX);
 }
 
 // texture
-void attach (char* loc, Texture texture, int type)
+void attach (char* loc, Texture* texture_, int type)
 {
-	int idx = textureSlot + 12;
-	textureSlot += 1;
+	_attachValue(loc, texture_, type);
+}
 
-	rlEnableShader(curShader.id);
+void _bindTexture(int loc, Texture texture, int type)
+{
+	int idx = shaderTextureSlot + 12;
+	shaderTextureSlot++;
+	
+	rlEnableShader(handle().id);
 	rlActiveTextureSlot(idx);
 	#if defined(GRAPHICS_API_OPENGL_11)
 		glEnable(type);
 	#endif
+	
 	glBindTexture(type, texture.id);
-	rlSetUniform(getLoc(loc), &idx, SHADER_UNIFORM_INT, 1);
+	rlSetUniform(loc, &idx, SHADER_UNIFORM_INT, 1);
 }
 
-} 
-SHADER;
+void bind()
+{
+	// dont bind the same shader twice
+	if (handle().id == curShader.id) return;
+	
+	curShader = handle();
+	rlSetShader(handle().id, handle().locs);
+	shaderTextureSlot = 0;
+}
+
+void attach()
+{
+	for (int i = 0; i < uniforms.size; i++)
+	{
+	Attachment u = uniforms[i];
+	
+	switch (u.type)
+	{
+	case SHADER_UNIFORM_MATRIX:
+		SetShaderValueMatrix(handle(), u.loc, *(Matrix*) u.value);
+		break;
+	case SHADER_UNIFORM_TEXTURE2D:
+		_bindTexture(u.loc, *(Texture*) u.value, GL_TEXTURE_2D);
+		break;
+	case SHADER_UNIFORM_TEXTURE3D:
+		_bindTexture(u.loc, *(Texture*) u.value, GL_TEXTURE_3D);
+		break;
+	case SHADER_UNIFORM_TEXTURE_CUBE:
+		_bindTexture(u.loc, *(Texture*) u.value, GL_TEXTURE_CUBE_MAP);
+		break;
+	default:
+		SetShaderValue(handle(), u.loc, u.value, u.type);
+		break;
+	}
+	}
+}
+
+} /* ShaderPass */ ;
+
+void shinit()
+{
+	defaultShader = LoadShader(0,0);
+	depthShader = LoadShaderFromMemory(depthvsShaderCode, depthfsShaderCode);
+}
+
+void shuse(Shader shader)
+{
+	curShader = shader;
+	rlSetShader(shader.id, shader.locs);
+	shaderTextureSlot = 0;
+}
+
+inline
+int shloc(Shader shader, char* name)
+{
+	return GetShaderLocation(shader, name);
+}
+
+void shset(Shader shader, char* name, int int_)
+{
+	int value = int_;
+	SetShaderValue(shader, shloc(shader, name), &value, SHADER_UNIFORM_INT);
+}
+
+void shset(Shader shader, char* name, float float_)
+{
+	float value = float_;
+	SetShaderValue(shader, shloc(shader, name), &value, SHADER_UNIFORM_FLOAT);
+}
+
+void shset(Shader shader, char* name, vec2 vec2_)
+{
+	vec2 value = vec2_;
+	SetShaderValue(shader, shloc(shader, name), &value, SHADER_UNIFORM_VEC2);
+}
+void shset(Shader shader, char* name, vec3 vec3_)
+{
+	vec3 value = vec3_;
+	SetShaderValue(shader, shloc(shader, name), &value, SHADER_UNIFORM_VEC3);
+}
+void shset(Shader shader, char* name, vec4 vec4_)
+{
+	vec4 value = vec4_;
+	SetShaderValue(shader, shloc(shader, name), &value, SHADER_UNIFORM_VEC4);
+}
+
+void shset(Shader shader, char* name, Matrix matrix_)
+{
+	SetShaderValueMatrix(shader, shloc(shader, name), matrix_);
+}
+
+void shset(Shader shader, char* name, Texture texture, int type)
+{
+	int idx = shaderTextureSlot + 12;
+	shaderTextureSlot++;
+	
+	rlEnableShader(shader.id);
+	rlActiveTextureSlot(idx);
+	#if defined(GRAPHICS_API_OPENGL_11)
+		glEnable(type);
+	#endif
+	
+	glBindTexture(type, texture.id);
+	rlSetUniform(shloc(shader, name), &idx, SHADER_UNIFORM_INT, 1);
+}

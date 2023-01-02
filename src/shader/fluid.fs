@@ -42,5 +42,4 @@ void main()
 	gl_FragDepth = clipPos.z / clipPos.w;
 	
 	finalColor = colDiffuse * fragColor;
-	finalColor = gl_FragCoord;
 }

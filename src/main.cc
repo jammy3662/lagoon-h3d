@@ -3,10 +3,10 @@
 
 #include "../include/ext.h"
 
+#define LAGOON_DEBUG
+
 #include "../compile/SHADER.c"
 #include "../compile/TEXTURE.c"
-
-#define LAGOON_DEBUG
 
 #include "engine/define.h"
 #include "engine/rayext.h"
@@ -23,10 +23,11 @@ LOG_ERROR          // Error logging, used on unrecoverable failures
 LOG_FATAL (6)      // Fatal logging, used to abort program: exit(EXIT_FAILURE)
 LOG_NONE            // Disable logging
 */
+#define LOG_LEVEL 3
 
 void drawFrame(Texture frame, Color tint)
 {
-	SHADER.use(defaultShader);
+	shuse(defaultShader);
 	DrawTexturePro(frame, Rectangle(0,0, frame.width, -frame.height), Rectangle(0,0, wwidth, wheight), {0,0}, 0, tint);
 }
 
@@ -36,14 +37,13 @@ int main(int argc, char** argv)
 {
 	int running = true;
 	
-	SetTraceLogLevel(4);
-	//SetTraceLogLevel(7);
+	SetTraceLogLevel(LOG_LEVEL);
 	
 	InitWindow(1280, 720, "sigh");
 	SetTargetFPS(60);
 	SetExitKey(0);
 	
-	SHADER.init();
+	shinit();
 	
 	// fallback in case nothing
 	// else sets this before

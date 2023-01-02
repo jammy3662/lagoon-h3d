@@ -60,17 +60,17 @@ float calcShadow()
 	
 	// closest distance from sun
 	float zsun = texture2D(shadowMap, pos.xy).r;
-	zsun += bias; // avoid shadow acne
+	zsun -= bias; // avoid shadow acne
 	
 	// distance of frag from nearest surface
 	float dist = zcam - zsun;
 	
 	// apply gradual shadow if pixel obscured from sun
-	if (dist >= 0)
+	if (dist >= 0.0)
 	{
 		shadow = ambient;
-		shadow += ((zcam / zsun) - 1) / 5;
-		shadow = min(shadow, max(ambient, 1-ambient-ambient));
+		//shadow += ((zcam / zsun) - 1) / 5;
+		//shadow = min(shadow, max(ambient, 1-ambient-ambient));
 	}
 	else
 	{
@@ -100,6 +100,8 @@ vec4 calcLight(vec4 color)
 	float light = (diffuse + specular) * shadow;
 	color.rgb *= sunColor.rgb * light;
 	
+	return vec4(shadow, shadow, shadow, 1.0);
+	
 	return color;
 }
 
@@ -108,9 +110,8 @@ void main()
 	vec4 color;
 	color = colDiffuse * fragColor * texture(texture0, fragCoord);
 	
-	color = calcLight(color);
+	//color = calcLight(color);
 	color = calcReflection(color);
 	
 	finalColor = color;
-	//finalColor = vec4(vec3(eye), 1.0);
 }

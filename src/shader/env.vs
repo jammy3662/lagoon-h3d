@@ -34,12 +34,11 @@ void main()
 	fragColor = vertexColor;
 	fragNormal = (matNormal * vec4(vertexNormal, 1.0)).xyz;
 	
-	// this is the same calculation as
-	// the final vertex position, except
-	// from the light camera
-	fragSun = sunProj * sunView * matModel * vec4(vertexPosition, 1.0);
-	
 	// Calculate final vertex position
 	gl_Position = mvp * vec4(vertexPosition, 1.0);
-	gl_Position.y += face/6;
+	
+	// transform the output to draw to a specific
+	// face on the output cubemap
+	gl_Position = gl_Position / 6;
+	gl_Position.y += face / 6.0;
 }

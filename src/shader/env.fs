@@ -34,11 +34,22 @@ void main()
 	
 	color = colDiffuse * fragColor * texture(texture0, fragCoord);
 	
+	// for now, a full diffuse light calculation is too
+	// expensive; instead use depth from camera
+	// to create artificial shading;
+	//
+	// this would (probably) be hard to notice
+	// in reflections, so its acceptable
 	float light;
 	
+	/*
 	vec3 lightv = normalize(sunDir);
 	light = (dot(fragNormal, lightv) + 1) * 0.5;
 	light = (light * (1 - ambient)) + ambient;
+	*/
+	
+	light = gl_FragCoord.w;
+	light = max(ambient, light);
 	
 	color.rgb *= sunColor.rgb * light;
 	
