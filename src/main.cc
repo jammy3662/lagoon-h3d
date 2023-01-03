@@ -1,15 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <ext.h>
 
-#include "../include/ext.h"
-
-#define LAGOON_DEBUG
-
-#include "../compile/SHADER.c"
-#include "../compile/TEXTURE.c"
-
-#include "engine/define.h"
-#include "engine/rayext.h"
+#include "define.h"
+#include "filament/filament.h"
 
 #include "game/game.h"
 
@@ -42,6 +36,8 @@ int main(int argc, char** argv)
 	InitWindow(1280, 720, "sigh");
 	SetTargetFPS(60);
 	SetExitKey(0);
+	
+	printf(ABOUT ".");
 	
 	shinit();
 	

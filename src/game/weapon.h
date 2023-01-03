@@ -2,8 +2,10 @@
 
 struct Bullet
 {
-	typedef enum {BULLET_STREAM,BULLET_SPHERE,BULLET_SPLASH,}
-		BulletType;
+	typedef enum BulletType {
+		BULLET_STREAM, BULLET_SPHERE,
+		BULLET_SPLASH,
+	} BulletType;
 	
 	float radius; // hitbox radius
 	float splashRadius;
@@ -54,6 +56,75 @@ struct MainWeapon
 	Bullet bullet;
 };
 
+struct MainShooter: public MainWeapon
+{
+	int shotFrames; // frames per shot
+};
+
+struct MainSemi: MainWeapon
+{
+	int shotFrames; // frames per shot
+	int fireFrames; // frames of continuous shots
+	int cycleFrames; // frames between each fire
+};
+
+struct MainGatling: MainWeapon
+{
+	int shotFrames; // frames per shot
+	int fireFrames; // frames of continuous shots
+	
+	int chargeFrames; // base charge
+	int superFrames; // extra charge
+};
+
+struct MainBlaster: MainWeapon
+{
+	int shotFrames; // frames per shot
+	
+	float splashDamage;
+	float splashRadius;
+	float chipDamage;
+	float chipRadius;
+};
+
+struct MainCharger: MainWeapon
+{
+	int hasScope;
+	int canStore;
+	
+	int chargeFrames; // total frames of charge
+	int storeFrames; // frames of held charge
+	
+	float scopeFov; // zoom value in fov (degrees)
+};
+
+struct MainBrush: MainWeapon
+{
+	int shotCt;
+	
+	float paintWidth;
+	float rollSpeedMultiplier;
+};
+
+struct MainRoller: MainWeapon
+{
+	int flickShotCt;
+	int flingShotCt;
+	
+	float flingSpread;
+	float flingRange;
+	
+	float paintWidth;
+	float rollSpeedMultiplier;
+};
+
+struct MainBucket: MainWeapon
+{
+	int shotCt;
+};
+
+/* __INGAME__ */
+
 struct Weapon
 {
 	int triggerHeld;
@@ -69,9 +140,9 @@ struct Weapon
 	void shoot(Bullet bullet); // most bullets
 	void swing(); // brush melee, roller melee, etc
 	
-	virtual void update();
-	virtual void trigger();
-	virtual void release();
+	virtual void update() {}
+	virtual void trigger() {}
+	virtual void release() {}
 };
 
 void Weapon::shoot(Bullet bullet)
@@ -79,146 +150,48 @@ void Weapon::shoot(Bullet bullet)
 	bullets->append(bullet);
 }
 
-//
-// Shooter
-//
-
-struct MainShooter: public MainWeapon
+struct Shooter: Weapon
 {
-	int shotFrames; // frames per shot
-};
-
-struct Shooter: public Weapon, public MainShooter
-{	
+	MainShooter stat;
 	int isFiring;
 	int shotF;
-	
-	void trigger()
+
+void trigger()
+{
+	if (!isFiring)
 	{
-		if (!isFiring)
-		{
-			delayF = delayFrames;
-			shotF = 0;
-		}
+		delayF = delayFrames;
+		shotF = 0;
+	}
+	triggerHeld = true;
+}
+
+void release()
+{
+	releaseF = releaseFrames;	
+	triggerHeld = false;
+}
+
+void update()
+{
+	if (triggerHeld)
+	{
+		if (delayF) { delayF--; return; }
+		isFiring = true;
 		
-		triggerHeld = true;
+		if (shotF) { shotF--; return; }
+		
+		shoot(bullet);
+		
+		shotF = shotFrames;
 	}
-
-	void release()
+	else
 	{
-		releaseF = releaseFrames;	
-		triggerHeld = false;
+		if (releaseF) { releaseF--; return; }
+		isFiring = false;
+		
+		if (bufferF) { bufferF--; return; }
 	}
+}
 
-	void update()
-	{
-		if (triggerHeld)
-		{
-			if (delayF) { delayF--; return; }
-			isFiring = true;
-			
-			if (shotF) { shotF--; return; }
-			
-			shoot(bullet);
-			
-			shotF = shotFrames;
-		}
-		else
-		{
-			if (releaseF) { releaseF--; return; }
-			isFiring = false;
-			
-			if (bufferF) { bufferF--; return; }
-		}
-	}
-};
-
-//
-// Semi-auto shooter
-//
-
-struct MainSemi: MainWeapon
-{
-	int shotFrames; // frames per shot
-	int fireFrames; // frames of continuous shots
-	int cycleFrames; // frames between each fire
-};
-
-//
-// Gatling
-//
-
-struct MainGatling: MainWeapon
-{
-	int shotFrames; // frames per shot
-	int fireFrames; // frames of continuous shots
-	
-	int chargeFrames; // base charge
-	int superFrames; // extra charge
-};
-
-//
-// Blaster
-//
-
-struct MainBlaster: MainWeapon
-{
-	int shotFrames; // frames per shot
-	
-	float splashDamage;
-	float splashRadius;
-	float chipDamage;
-	float chipRadius;
-};
-
-//
-// Charger
-//
-
-struct MainCharger: MainWeapon
-{
-	int hasScope;
-	int canStore;
-	
-	int chargeFrames; // total frames of charge
-	int storeFrames; // frames of held charge
-	
-	float scopeFov; // zoom value in fov (degrees)
-};
-
-//
-// Brush
-//
-
-struct MainBrush: MainWeapon
-{
-	int shotCt;
-	
-	float paintWidth;
-	float rollSpeedMultiplier;
-};
-
-//
-// Roller
-//
-
-struct MainRoller: MainWeapon
-{
-	int flickShotCt;
-	int flingShotCt;
-	
-	float flingSpread;
-	float flingRange;
-	
-	float paintWidth;
-	float rollSpeedMultiplier;
-};
-
-//
-// Bucket
-//
-
-struct MainBucket: MainWeapon
-{
-	int shotCt;
 };

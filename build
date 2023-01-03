@@ -1,35 +1,46 @@
 #!/bin/bash
 
+# it always comes back
+rm -rf .vscode
+
 source ~/.bashalias # some helper functions
 # (need this for 'contains' command and c error formatting)
-
-IN="src/main.cc"
-OUT="sigh"
 
 VERSION=$(date +%-y.%-m.%-d)
 PLATFORM=$(uname -m)
 
-FLAGS="-Wno-c++11-narrowing -Wno-write-strings -g3 -fno-caret-diagnostics -ferror-limit=150"
-LINK="-Lcompile/lib -lraylib -lstb -lglad -lGL -lglfw -lm -lpthread -ldl -lrt -lX11 -lenet"
+IN="src/main.cc"
+OUT="lagoon_$VERSION"
 
-#clear
+FLAGS=" \
+	-Wno-c++11-narrowing -Wno-write-strings \
+	-g3 \
+	-fno-caret-diagnostics -ferror-limit=150"
 
-./buildRes s
+MACROS=" \
+	-DVERSION=\"$VERSION\" \
+	-DPLATFORM=\"$PLATFORM\" \
+	-DABOUT\"Lagoon build $PLATFORM@$VERSION\" \
+	-DDEBUG \
+	-DLAGOON_DEBUG"
+
+INCLUDE=" \
+	-isystem src -isystem ~/include"
+
+LINK=" \
+	-Lcompile/lib \
+	-lglad -lGL -lglfw -lm -lenet"
 
 # compile code
 
 cerror-filter \
-clang++ -c $IN -o compile/MAIN.o -isystem src -isystem inc -isystem ~/include $FLAGS -DVERSION="\"$VERSION\"" -DPLATFORM="\"$PLATFORM\"" -DDEBUG
-SUCCESS=$?
-
-# compile program with resource binary
-clang++ compile/MAIN.o compile/SHADER.o compile/TEXTURE.o -o "$OUT" -isystem src -isystem inc -isystem ~/include $FLAGS $LINK -DVERSION="\"$VERSION\"" -DPLATFORM="\"$PLATFORM\"" -DDEBUG
+	clang++ -static "$IN" -o "$OUT" \
+		$INCLUDE $LINK $FLAGS
 
 SUCCESS=$?
+[[ $SUCCESS -eq 0 ]] && strip "$OUT"
 
 contains run $@; if [[ $? -ne 0 && $SUCCESS -eq 0 ]]
 then
 	"./$OUT"
 fi
-
-exit $SUCCESS

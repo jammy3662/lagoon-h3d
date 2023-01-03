@@ -1,12 +1,7 @@
 #pragma once
 
-#include "../compile/SHADER.c"
-#include "../compile/TEXTURE.c"
+#include "../filament/filament.h"
 
-#include "../engine/define.h"
-#include "../engine/shader.h"
-
-#include "scene.h"
 #include "player.h"
 
 // internal output resolution
@@ -16,11 +11,6 @@
 #define ENVMAP_DIM 100
 
 #define LOBBY_MAX 18
-
-struct Stage
-{
-	Model model;
-};
 
 struct Game {
 

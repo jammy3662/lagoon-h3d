@@ -1,7 +1,7 @@
 #pragma once
 
 #include "weapon.h"
-#include "../engine/camera.h"
+#include "../filament/camera.h"
 
 #define PLAYER_EYE (float)0.9
 #define PLAYER_HEIGHT 1
