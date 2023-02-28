@@ -1,46 +1,34 @@
 #!/bin/bash
 
+cd src
+
+VERSION=$(date +%-y.%-V.%-u)
+PLATFORM=$(uname -m)
+
+clang++ main.cc -o ../lagoon \
+\
+	-g3 \
+	-Wno-c++11-narrowing -Wno-write-strings -Wno-reserved-user-defined-literal \
+	-fno-caret-diagnostics -ferror-limit=3 \
+\
+	-isystem /home/$(whoami)/include/ \
+	-I/home/$(whoami)/build/glad/include/ \
+\
+	-L/usr/local/lib/ \
+	-L/home/$(whoami)/lib/ \
+	-lHorde3D -lHorde3DUtils \
+	-lGL -lglfw -lglad \
+	-ldl \
+\
+	-DVERSION=\"$VERSION\" \
+	-DPLATFORM=\"$PLATFORM\" \
+$@
+# capture clang error code
+SUCCESS=$?
+
+cd ..
+
 # it always comes back
 rm -rf .vscode
 
-source ~/.bashalias # some helper functions
-# (need this for 'contains' command and c error formatting)
-
-VERSION=$(date +%-y.%-m.%-d)
-PLATFORM=$(uname -m)
-
-IN="src/main.cc"
-OUT="lagoon_$VERSION"
-
-FLAGS=" \
-	-Wno-c++11-narrowing -Wno-write-strings \
-	-g3 \
-	-fno-caret-diagnostics -ferror-limit=150"
-
-MACROS=" \
-	-DVERSION=\"$VERSION\" \
-	-DPLATFORM=\"$PLATFORM\" \
-	-DABOUT\"Lagoon build $PLATFORM@$VERSION\" \
-	-DDEBUG \
-	-DLAGOON_DEBUG"
-
-INCLUDE=" \
-	-isystem src -isystem ~/include"
-
-LINK=" \
-	-Lcompile/lib \
-	-lglad -lGL -lglfw -lm -lenet"
-
-# compile code
-
-cerror-filter \
-	clang++ -static "$IN" -o "$OUT" \
-		$INCLUDE $LINK $FLAGS
-
-SUCCESS=$?
-[[ $SUCCESS -eq 0 ]] && strip "$OUT"
-
-contains run $@; if [[ $? -ne 0 && $SUCCESS -eq 0 ]]
-then
-	"./$OUT"
-fi
+exit $SUCCESS
