@@ -1,0 +1,32 @@
+<Pipeline>
+
+<Setup>
+	<RenderTarget id="gbuffer"
+		depthBuf="true" numColBufs=4 width=0 height=0 />
+	<RenderTarget id="overheadSun"
+		depthBuf="true" numColBufs=0 width=256 height=256 />
+	<RenderTarget id="shadowWeak"
+		depthBuf="true" numColBufs=0 width=256 height=256 />
+	<RenderTarget id="shadow"
+		depthBuf="true" numColBufs=0 width=256 height=256 />
+</Setup>
+	
+<CommandQueue>
+	
+	<Stage id="raster">
+		<SwitchTarget target="gbuffer" />
+		<ClearTarget
+			colBuf0="true", colBuf1="true",
+			colBuf2="true", depthBuf="true" />
+		<DrawGeometry context="GBUFFER" />
+	</Stage>
+	
+	<Stage id="final">
+		<SwitchTarget target="" />
+		<ClearTarget colBuf0="true" />
+		
+	</Stage>
+
+</CommandQueue>
+
+</Pipeline>

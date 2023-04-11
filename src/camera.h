@@ -2,11 +2,9 @@
 
 #include "engine.h"
 
-struct Camera
-{
+struct Camera {
 	// speed (amount of rotation per frame)
-	float speed[2];
-		// x and y component
+	struct {float x,y;} speed;
 	
 	// sensitivity (how quickly the camera responds to input)
 	float sens;
@@ -29,9 +27,9 @@ struct Camera
 // rotate without smoothing
 void cmRotateRaw(Camera* cm, float x, float y)
 {
-	*cm->pivot += x * cm->speed[0];
+	*cm->pivot += x * cm->speed.x;
 	*cm->pivot = fmod(*cm->pivot, 2*M_PI);
-	*cm->pitch += y * cm->speed[1];
+	*cm->pitch += y * cm->speed.y;
 	*cm->pitch = fmod(*cm->pitch, 2*M_PI);
 }
 
@@ -46,8 +44,8 @@ void cmRotate(Camera* cm, float x, float y)
 		*rot = \
 				waverage(*rot, rot[1], cm->smooth);
 	
-	interp(cm->pivot, x, cm->speed[0])
-	interp(cm->pitch, y, cm->speed[1])
+	interp(cm->pivot, x, cm->speed.x)
+	interp(cm->pitch, y, cm->speed.y)
 	
 	#undef interp
 }

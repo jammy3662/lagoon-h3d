@@ -7,22 +7,18 @@ PLATFORM=$(uname -m)
 
 clang++ main.cc -o ../lagoon \
 \
-	-g3 \
-	-Wno-c++11-narrowing -Wno-write-strings -Wno-reserved-user-defined-literal \
-	-fno-caret-diagnostics -ferror-limit=3 \
-\
-	-isystem /home/$(whoami)/include/ \
-	-I/home/$(whoami)/build/glad/include/ \
-\
-	-L/usr/local/lib/ \
-	-L/home/$(whoami)/lib/ \
-	-lHorde3D -lHorde3DUtils \
-	-lGL -lglfw -lglad \
-	-ldl \
-\
 	-DVERSION=\"$VERSION\" \
 	-DPLATFORM=\"$PLATFORM\" \
+\
+	-g3 \
+	-Wno-c++11-narrowing -Wno-write-strings -Wno-reserved-user-defined-literal \
+\
+	-Iinclude \
+	-L/usr/lib/x86_64-linux-gnu/cmake/ \
+	-lglfw -ldl \
+	-lHorde3D -lHorde3DUtils \
 $@
+
 # capture clang error code
 SUCCESS=$?
 

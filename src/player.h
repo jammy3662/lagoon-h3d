@@ -14,75 +14,97 @@
 
 #define PLAYER_ORBIT_DISTANCE (PLAYER_HEIGHT * 1.3)
 
+using namespace Input;
+
 struct Player
 {
+	const float eye = 0.9;
+	const float height = 1;
+	
+	const float orbitDist = height *	1.3;
+	const int fovMin = 30;
+	const int fovMax = 180;
+	
 	vec3 pos; // position
 	vec3 vel; // velocity
 	
 	// movement direction (global)
 	// functions as a "queue"
-	vec2 wishdir[3];
+	vec2 wishdir[2];
 	
 	Camera camera;
+	
+	float speed; // horizontal speed based on player state
+	float accel; // speed interpolation factor (0.9 = swift, 0.1 = sluggish)
 
-	enum State
-	{
-		NONE = 0,
-		
+	bool onFloor;
+	bool onWall;
+
+	enum State {
+		FLOORED = 0x0, // standing on solid ground
 		MOVING =	0x1,
-		SPRINT =	0x2,
-		
-		CETA =	0x4,
-		SHIFT =	0x8, // true when in between forms
-		
-		ACTIVE =	0x10, // unset externally for pausing
+		SPRINT = 0x2,
+		STRAFE = 0x4, // slower movement
+		SAFE = 0x8, // true when submerged in paint
+		SWIM = 0x10, // true in dolphin form
+		MORPH = 0x20, // true when in between forms
+		ACTIVE =	0x40, // unset externally for pausing
+	};
+	int state_;
+	
+	inline bool state( State _state_ ) {
+		return (state_ & _state_);
 	}
-	state;
-};
-
-// reads input bindings from arguments
-void plReadInput(Player* pl, int north, int east, int confirm, int shift, int ctrl, int tab)
-{
-	float wishdir[2] = {0.0, 0.0};
 	
-	if (east > 0) wishdir[0] = 1;
-	else if (east < 0) wishdir[0] = -1;
+	inline void setstate( State _state_, int flag) {
+		if (flag) {
+			state_ |= _state_;
+		} else {
+			state_ &= ~_state_;
+		}
+	}
 	
-	if (north > 0) wishdir[1] = 1;
-	else if (north < 0) wishdir[1] = -1;
-	
-	// TODO: normalize wishdir here
-	// or replace the whole thing above with
-	// hardcoded angles as lookup (probably better)
-	
-	if (confirm) pl->vel.y = 1;
-	else if (ctrl) pl->vel.y = -1;
-	
-	if (tab) pl->camera.orbit = false;
-}
-
-void plUpdate(Player* pl)
-{
-	if (pl->state & Player::State::ACTIVE)
+	void handleInput()
 	{
-		// TODO: read input from backend lib
-		// and pass in here
-		plReadInput(pl, 0, 0, 0, 0, 0, 0);
+		vec2 wishdir = Input::joystick;
+		
+		if (Input::isPressed(Input::ACCEPT)
+				&& state(FLOORED)) {
+			jump();
+		}
 	}
 	
-	// interpolate movement
-	// using weighted average for smoothing;
-	// there is probably a better way
-	pl->wishdir[2] = waverage(
-			pl->wishdir[2], pl->wishdir[1], 0.3);
-	pl->wishdir[1] = waverage(
-			pl->wishdir[1], pl->wishdir[2], 0.2);
+	void jump()
+	{
+		
+	}
 	
-	*pl->wishdir = waverage(
-			pl->wishdir[0], pl->wishdir[1], 0.9);
+	void update()
+	{
+		handleInput();
+		physicsCheck(onFloor, onWall);
+		movement();
+		
+		if (Input::isPressed(Input::ACCEPT)) {
+			if (state(FLOORED)) jump();
+		}
+	}
 	
-	// interpolate pov
-	// TODO: implement this with an
-	// animation engine rather than
-	// crude interpolation
-}
+	void physicsCheck(bool& isOnFloor, bool& isOnWall)
+	{
+		
+	}
+	
+	void movement()
+	{
+		accel = 0.95;
+		speed = 1.00;
+		
+		if (!state(MORPH))
+		{
+			if (state(SPRINT)) accel -= 0.40;
+			if (state(SAFE)) speed += 0.05;
+			if (state(SWIM)) speed += 0.20;
+		}
+	}
+};
