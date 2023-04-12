@@ -10,7 +10,13 @@
 #include "engine.h"
 #include "player.h"
 
+// when set, the game will attempt to
+// save and cleanup on exit
 bool running = false;
+
+// when unset, the 3d camera controller
+// is disabled (for menus without a 3d scene)
+bool actorEnabled = false;
 
 GLFWwindow * window;
 
@@ -46,19 +52,20 @@ int initRenderContext()
 	return 0;
 }
 
-
-
 int main(int argc, char* argv[])
 {
 	if (initRenderContext()) return 1;
 	
 	H3DRes pipeline = h3dAddResource(H3DResTypes::Pipeline, "h3d/gbuffer.pipeline.xml", 0);
-	h3dutDumpMessages();
 	
 	while (!glfwWindowShouldClose(window)) {
 		
 		glfwPollEvents();
 		//glfwSwapBuffers();
+	}
+	
+	if (running) {
+		// TODO:	cleanup state / save here
 	}
 	
 	glfwTerminate();
