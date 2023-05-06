@@ -1,74 +1,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <GLFW/glfw3.h>
+#include "define.h"
 
-#include <horde3d/Horde3D.h>
-#include <horde3d/Horde3DUtils.h>
+#include "render.h"
+#include "input.h"
 
-#include "../include/ext.h"
-#include "engine.h"
-#include "player.h"
-
-// when set, the game will attempt to
-// save and cleanup on exit
-bool running = false;
-
-// when unset, the 3d camera controller
-// is disabled (for menus without a 3d scene)
-bool actorEnabled = false;
-
-GLFWwindow * window;
-
-int resX = 1280; // window width
-int resY = 720; // window height
-
-int initRenderContext()
+int main (int argc, char** argv)
 {
-	if (!glfwInit()) {
-		fprintf(stderr, "GLFW failed to initialize OpenGL\n");
-		return 1;
-	}
+	RenderContext render =
+	createRenderContext ();
 	
-	// target OpenGL 4.0
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	window = glfwCreateWindow(resX, resY, "lagoon-h3d test", NULL, NULL);
+	InputContext input
+	= connectInput (render.window);
 	
-	if (!window) {
-		glfwTerminate();
-		fprintf(stderr, "GLFW failed to open window\n");
-		return 2;
-	}
+	int paused = 0;
 	
-	glfwMakeContextCurrent(window);
-	
-	if (!h3dInit(H3DRenderDevice::OpenGL4)) {
-		fprintf(stderr, "Horde3D failed to init\n");
-		return 3;
-	}
-	return 0;
-}
-
-int main(int argc, char* argv[])
-{
-	if (initRenderContext()) return 1;
-	
-	H3DRes pipeline = h3dAddResource(H3DResTypes::Pipeline, "h3d/gbuffer.pipeline.xml", 0);
-	
-	while (!glfwWindowShouldClose(window)) {
+	while (! render.shouldClose)
+	{
+		updateRenderContext (render);
+		updateInputs (input);
 		
-		glfwPollEvents();
-		//glfwSwapBuffers();
+		if (getButton (input, InputAction::MENU))
+		{
+			render.shouldClose = true;
+		}
 	}
 	
-	if (running) {
-		// TODO:	cleanup state / save here
-	}
-	
-	glfwTerminate();
+	glfwTerminate ();
 	
 	return 0;
 }
+

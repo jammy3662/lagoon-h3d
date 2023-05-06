@@ -1,5 +1,7 @@
 #pragma once
 
+#include "backend.h"
+
 struct Bullet
 {
 	typedef enum BulletType {

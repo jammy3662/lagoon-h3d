@@ -10,21 +10,21 @@
 	<RenderTarget id="shadow"
 		depthBuf="true" numColBufs=0 width=256 height=256 />
 </Setup>
-	
+
 <CommandQueue>
-	
+
 	<Stage id="raster">
 		<SwitchTarget target="gbuffer" />
 		<ClearTarget
-			colBuf0="true", colBuf1="true",
+			colBuf0="true" colBuf1="true",
 			colBuf2="true", depthBuf="true" />
 		<DrawGeometry context="GBUFFER" />
 	</Stage>
-	
+
 	<Stage id="final">
 		<SwitchTarget target="" />
 		<ClearTarget colBuf0="true" />
-		
+
 	</Stage>
 
 </CommandQueue>
