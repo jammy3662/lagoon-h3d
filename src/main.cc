@@ -21,9 +21,14 @@ int main (int argc, char** argv)
 		updateRenderContext (render);
 		updateInputs (input);
 		
-		if (getButton (input, InputAction::MENU))
+		if (getButtonNow (input, InputAction::MENU))
 		{
-			render.shouldClose = true;
+			paused = ! paused;
+			
+			if (paused)
+				glfwSetInputMode (input.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			else
+				glfwSetInputMode (input.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		}
 	}
 	

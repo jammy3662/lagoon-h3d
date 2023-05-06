@@ -21,22 +21,22 @@ enum MouseCode
 
 enum GamepadCode
 {
-	A = GLFW_GAMEPAD_BUTTON_A,
-	B = GLFW_GAMEPAD_BUTTON_B,
-	X = GLFW_GAMEPAD_BUTTON_X,
-	Y = GLFW_GAMEPAD_BUTTON_Y,
+	A_BUT = GLFW_GAMEPAD_BUTTON_A,
+	B_BUT = GLFW_GAMEPAD_BUTTON_B,
+	X_BUT = GLFW_GAMEPAD_BUTTON_X,
+	Y_BUT = GLFW_GAMEPAD_BUTTON_Y,
 	
-	L = GLFW_GAMEPAD_BUTTON_LEFT_BUMPER,
-	R = GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER,
-	ZL,
-	ZR,
+	L_BUT = GLFW_GAMEPAD_BUTTON_LEFT_BUMPER,
+	R_BUT = GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER,
+	ZL_BUT,
+	ZR_BUT,
 	
-	UP = GLFW_GAMEPAD_BUTTON_DPAD_UP,
-	DOWN = GLFW_GAMEPAD_BUTTON_DPAD_DOWN,
-	LEFT = GLFW_GAMEPAD_BUTTON_DPAD_LEFT, 
-	RIGHT = GLFW_GAMEPAD_BUTTON_DPAD_RIGHT,
+	UP_BUT = GLFW_GAMEPAD_BUTTON_DPAD_UP,
+	DOWN_BUT = GLFW_GAMEPAD_BUTTON_DPAD_DOWN,
+	LEFT_BUT = GLFW_GAMEPAD_BUTTON_DPAD_LEFT, 
+	RIGHT_BUT = GLFW_GAMEPAD_BUTTON_DPAD_RIGHT,
 	
-	START = GLFW_GAMEPAD_BUTTON_START,
+	START_BUT = GLFW_GAMEPAD_BUTTON_START,
 };
 
 enum AnalogCode
@@ -70,8 +70,8 @@ enum InputAction
 	MENU,
 	
 	PICK,
-	SHIFT,
 	ALT,
+	SHIFT,
 	
 	MORE,
 	LESS,
@@ -122,6 +122,35 @@ Mapping mouseAndKeyboard =
 	InputScalar {.device = ANALOG_MOUSE, .code = AXIS_RIGHT},
 };
 
+Mapping gamepadAndJoystick =
+{
+	InputScalar {.device = BUTTON_GAMEPAD, .code = A_BUT},
+	InputScalar {.device = BUTTON_GAMEPAD, .code = B_BUT},
+	InputScalar {.device = BUTTON_GAMEPAD, .code = X_BUT},
+	InputScalar {.device = BUTTON_GAMEPAD, .code = Y_BUT},
+	
+	InputScalar {.device = BUTTON_GAMEPAD, .code = START_BUT},
+	
+	InputScalar {.device = BUTTON_GAMEPAD, .code = ZR_BUT},
+	InputScalar {.device = BUTTON_GAMEPAD, .code = R_BUT},
+	InputScalar {.device = BUTTON_GAMEPAD, .code = ZL_BUT},
+	
+	InputScalar {.device = BUTTON_GAMEPAD, .code = UP_BUT},
+	InputScalar {.device = BUTTON_GAMEPAD, .code = DOWN_BUT},
+	InputScalar {.device = BUTTON_GAMEPAD, .code = LEFT_BUT},
+	InputScalar {.device = BUTTON_GAMEPAD, .code = RIGHT_BUT},
+	
+	InputScalar {.device = ANALOG_JOYSTICK_L, .code = AXIS_UP},
+	InputScalar {.device = ANALOG_JOYSTICK_L, .code = AXIS_DOWN},
+	InputScalar {.device = ANALOG_JOYSTICK_L, .code = AXIS_LEFT},
+	InputScalar {.device = ANALOG_JOYSTICK_L, .code = AXIS_RIGHT},
+	
+	InputScalar {.device = ANALOG_JOYSTICK_R, .code = AXIS_UP},
+	InputScalar {.device = ANALOG_JOYSTICK_R, .code = AXIS_DOWN},
+	InputScalar {.device = ANALOG_JOYSTICK_R, .code = AXIS_LEFT},
+	InputScalar {.device = ANALOG_JOYSTICK_R, .code = AXIS_RIGHT},
+};
+
 struct InputContext
 {
 	GLFWwindow * window;
@@ -135,6 +164,9 @@ struct InputContext
 	double lastMouseX, lastMouseY;
 	
 	Mapping mapping;
+	
+	long pressedActions;
+	long heldActions;
 };
 
 double glfwScrollX;
@@ -175,12 +207,16 @@ void updateInputs (InputContext & input)
 {
 	glfwPollEvents ();
 	
-	double mx, my;
+	static double mx, my;
 	glfwGetCursorPos (input.window, & mx, & my);
 	input.mouseX = mx - input.lastMouseX;
 	input.lastMouseX = mx;
 	input.mouseY = my - input.lastMouseY;
 	input.lastMouseY = my;
+	
+	// store state from last frame
+	input.heldActions = input.pressedActions;
+	input.pressedActions = 0;
 	
 	for (int i = 0; i < INPUT_ACTION_CT; i++)
 	{
@@ -200,12 +236,12 @@ void updateInputs (InputContext & input)
 			case BUTTON_GAMEPAD:
 				glfwGetGamepadState (input.gamepadIdx, & input.gamepad);
 				
-				if (binding.code == ZL)
+				if (binding.code == ZL_BUT)
 				{
 					binding.strength = input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
 					break;
 				}
-				if (binding.code == ZR)
+				if (binding.code == ZR_BUT)
 				{
 					binding.strength = input.gamepad.axes [GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
 					break;
@@ -258,12 +294,25 @@ void updateInputs (InputContext & input)
 						break;
 				}
 		}
+		
+		if (binding.strength != 0.0)
+			input.pressedActions |= 1 << i;
 	}
 }
 
-double getButton (InputContext & input, InputAction button)
+bool getButton (InputContext & input, InputAction button)
 {
-	return input.mapping [button].strength;
+	return (input.mapping [button].strength != 0);
+}
+
+bool getButtonNow (InputContext & input, InputAction button)
+{
+	long mask = 1 << button;
+	return
+	(
+		mask & input.pressedActions &&
+		!(mask &	input.heldActions)
+	);
 }
 
 vec2 getNav (InputContext & input)
