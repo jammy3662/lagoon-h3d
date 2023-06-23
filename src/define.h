@@ -2,18 +2,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
-#include <GLFW/glfw3.h>
-
-#include <horde3d/Horde3D.h>
-#include <horde3d/Horde3DUtils.h>
+#include <cstdlib>
 
 #include "../include/ext.h"
 
-// custom (more crude) bool type
-#define bool char
-#define false 0
-#define true 1
+#define let constexpr static
 
 typedef struct{double x,y;} vec2;
 typedef struct{double x,y,z;} vec3;

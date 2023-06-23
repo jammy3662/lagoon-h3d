@@ -14,9 +14,9 @@ clang++ main.cc -o ../lagoon \
 	-Wno-c++11-narrowing -Wno-write-strings -Wno-reserved-user-defined-literal \
 \
 	-Iinclude \
-	-L/usr/lib/x86_64-linux-gnu/cmake/ \
-	-lglfw -ldl \
-	-lHorde3D -lHorde3DUtils \
+	-Llib \
+	-lGL -lglad -lglfw \
+	-lassimp \
 $@
 
 # capture clang error code

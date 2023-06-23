@@ -3,22 +3,25 @@
 
 #include "define.h"
 
-#include "render.h"
+//#define DEBUG_INPUT
+
+#include "backend.h"
 #include "input.h"
+#include "shader.h"
 
 int main (int argc, char** argv)
 {
-	RenderContext render =
-	createRenderContext ();
+	RC render = createRenderContext ();
 	
-	InputContext input
-	= connectInput (render.window);
+	Inputs* input = connectInput (render.window);
 	
 	int paused = 0;
 	
+	Shader main = loadShaderSource ("shader/main.vs", "shader/main.fs");
+	
 	while (! render.shouldClose)
 	{
-		updateRenderContext (render);
+		updateRenderContext (&render);
 		updateInputs (input);
 		
 		if (getButtonNow (input, InputAction::MENU))
@@ -26,9 +29,9 @@ int main (int argc, char** argv)
 			paused = ! paused;
 			
 			if (paused)
-				glfwSetInputMode (input.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+				releaseCursor (input);
 			else
-				glfwSetInputMode (input.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+				captureCursor (input);
 		}
 	}
 	

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "define.h"
+#include "backend.h"
 
 enum InputDevice
 {
@@ -16,7 +17,8 @@ enum InputDevice
 enum MouseCode
 {
 	MOUSE_LEFT = GLFW_MOUSE_BUTTON_LEFT,
-	MOUSE_RIGHT = GLFW_MOUSE_BUTTON_RIGHT
+	MOUSE_RIGHT = GLFW_MOUSE_BUTTON_RIGHT,
+	MOUSE_MIDDLE = GLFW_MOUSE_BUTTON_MIDDLE,
 };
 
 enum GamepadCode
@@ -91,6 +93,19 @@ enum InputAction
 	INPUT_ACTION_CT
 };
 
+#ifdef DEBUG_INPUT
+
+const char * inputNames [] =
+{
+	"accept", "cancel", "info", "special",
+	"menu", "pick", "alt", "shift",
+	"more", "less", "prev", "next",
+	"nav up", "nav down", "nav left", "nav right",
+	"point up", "point down", "point left", "point right",
+};
+
+#endif
+
 typedef InputScalar Mapping [INPUT_ACTION_CT];
 
 Mapping mouseAndKeyboard =
@@ -151,11 +166,11 @@ Mapping gamepadAndJoystick =
 	InputScalar {.device = ANALOG_JOYSTICK_R, .code = AXIS_RIGHT},
 };
 
-struct InputContext
+struct Inputs
 {
-	GLFWwindow * window;
+	GLFWwindow* window;
 	
-	int gamepadIdx = 0;
+	int gamepadIdx;
 	GLFWgamepadstate gamepad;
 	
 	// relative movement
@@ -165,170 +180,190 @@ struct InputContext
 	
 	Mapping mapping;
 	
-	long pressedActions;
-	long heldActions;
+	bool pressedActions [INPUT_ACTION_CT];
+	bool heldActions [INPUT_ACTION_CT];
 };
+
+typedef Inputs IC;
 
 double glfwScrollX;
 double glfwScrollY;
 
-void inputScrollCallback (GLFWwindow *	window, double x, double y)
+// only way to access scroll input is through a callback
+void inputScrollCallback (GLFWwindow* window, double x, double y)
 {
 	glfwScrollX = x;
 	glfwScrollY = y;
 }
 
-InputContext connectInput (GLFWwindow * window)
+void releaseCursor (IC* n)
 {
-	InputContext ret = (InputContext) {0};
+	glfwSetInputMode (n->window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+}
+
+void captureCursor (IC* n)
+{
+	glfwSetInputMode (n->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+}
+
+bool getButton (IC* input, InputAction button)
+{
+	return (input->mapping [button].strength != 0);
+}
+
+bool getButtonNow (IC* input, InputAction button)
+{
+	return (input->pressedActions [button] && ! input->heldActions [button]);
+}
+
+vec2 getAxis1 (IC* input)
+{
+	return vec2
+	{
+		input->mapping [NAV_RIGHT].strength - input->mapping [NAV_LEFT].strength,
+		input->mapping [NAV_UP].strength - input->mapping [NAV_DOWN].strength
+	};
+}
+
+vec2 getAxis2 (IC* input)
+{
+	return vec2
+	{
+		input->mapping [POINT_RIGHT].strength - input->mapping [POINT_LEFT].strength,
+		input->mapping [POINT_UP].strength - input->mapping [POINT_DOWN].strength
+	};
+}
+
+IC* connectInput (GLFWwindow* window)
+{
+	IC* n = alloc (IC);
 	
-	ret.window = window;
+	n->window = window;
 	
 	// set default controls (keyboard and mouse)
-	for (int i = 0; i < INPUT_ACTION_CT; i++)
-	{
-		ret.mapping [i] = mouseAndKeyboard [i];
-	}
+	memcpy
+	(
+		n->mapping, mouseAndKeyboard,
+		INPUT_ACTION_CT * sizeof (*n->mapping)
+	);
 	
 	glfwSetScrollCallback (window, inputScrollCallback);
 	
 	if (glfwRawMouseMotionSupported ())
 	{
-		glfwSetInputMode (ret.window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+		glfwSetInputMode (n->window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 	}
 	
-	glfwSetInputMode (ret.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	glfwSetInputMode (ret.window, GLFW_STICKY_KEYS, GLFW_TRUE);
+	glfwSetInputMode (n->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetInputMode (n->window, GLFW_STICKY_KEYS, GLFW_TRUE);
 	
-	return ret;
+	return n;
 }
 
-void updateInputs (InputContext & input)
+void updateInputs (IC* input)
 {
 	glfwPollEvents ();
 	
+	// retrieve cursor data
 	static double mx, my;
-	glfwGetCursorPos (input.window, & mx, & my);
-	input.mouseX = mx - input.lastMouseX;
-	input.lastMouseX = mx;
-	input.mouseY = my - input.lastMouseY;
-	input.lastMouseY = my;
+	glfwGetCursorPos (input->window, &mx, &my);
+	input->mouseX = mx - input->lastMouseX;
+	input->mouseY = my - input->lastMouseY;
+	input->lastMouseX = mx;
+	input->lastMouseY = my;
 	
 	// store state from last frame
-	input.heldActions = input.pressedActions;
-	input.pressedActions = 0;
+	memcpy
+	(
+		input->heldActions, input->pressedActions,
+		INPUT_ACTION_CT * sizeof (bool)
+	);
+	// clean state to read next inputs
+	memset (input->pressedActions, 0, INPUT_ACTION_CT * sizeof (bool));
 	
+	// update each binding as per configuration
 	for (int i = 0; i < INPUT_ACTION_CT; i++)
 	{
-		InputScalar & binding = input.mapping [i];
-		binding.strength = 0.0;
+		InputScalar* binding = input->mapping + i;
+		binding->strength = 0.0;
 		
 		static int button;
 		static double axisX, axisY;
 		
-		switch (binding.device)
+		switch (binding->device)
 		{
 			case BUTTON_KEY:
-				button = glfwGetKey (input.window, binding.code);
-				if (button == GLFW_PRESS) binding.strength = 1.0;
-				break;
+				button = glfwGetKey (input->window, binding->code);
+				if (button == GLFW_PRESS) binding->strength = 1.0;
+			break;
 			
 			case BUTTON_GAMEPAD:
-				glfwGetGamepadState (input.gamepadIdx, & input.gamepad);
-				
-				if (binding.code == ZL_BUT)
+				glfwGetGamepadState (input->gamepadIdx, & input->gamepad);
+				if (binding->code == ZL_BUT)
 				{
-					binding.strength = input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
+					binding->strength = input->gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
 					break;
 				}
-				if (binding.code == ZR_BUT)
+				if (binding->code == ZR_BUT)
 				{
-					binding.strength = input.gamepad.axes [GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
+					binding->strength = input->gamepad.axes [GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
 					break;
 				}
-				if (input.gamepad.buttons [binding.code])
-					binding.strength = 1.0;
-				break;
+				if (input->gamepad.buttons [binding->code])
+					binding->strength = 1.0;
+			break;
 			
 			case BUTTON_MOUSE:
-				button = glfwGetMouseButton (input.window, binding.code);
-				if (button == GLFW_PRESS) binding.strength = 1.0;
-				break;
+				button = glfwGetMouseButton (input->window, binding->code);
+				if (button == GLFW_PRESS) binding->strength = 1.0;
+			break;
 			
 			case ANALOG_MOUSE:
-				axisX = input.mouseX;
-				axisY = input.mouseY;
-				break;
+				axisX = input->mouseX;
+				axisY = input->mouseY;
+			break;
 			case ANALOG_SCROLL:
 				axisX = glfwScrollX;
 				axisY = glfwScrollY;
-				break;
+			break;
 			case ANALOG_JOYSTICK_L:
-				axisX = input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_X];
-				axisY = input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_Y];
-				break;
+				axisX = input->gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_X];
+				axisY = input->gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_Y];
+			break;
 			case ANALOG_JOYSTICK_R:
-				axisX = input.gamepad.axes [GLFW_GAMEPAD_AXIS_RIGHT_X];
-				axisY = input.gamepad.axes [GLFW_GAMEPAD_AXIS_RIGHT_Y];
-				break;
+				axisX = input->gamepad.axes [GLFW_GAMEPAD_AXIS_RIGHT_X];
+				axisY = input->gamepad.axes [GLFW_GAMEPAD_AXIS_RIGHT_Y];
+			break;
 		}
 		
-		if (binding.device == ANALOG_MOUSE || 
-			binding.device == ANALOG_SCROLL ||
-			binding.device == ANALOG_JOYSTICK_L ||
-			binding.device == ANALOG_JOYSTICK_R)
+		if (binding->device == ANALOG_MOUSE || binding->device == ANALOG_SCROLL ||
+			binding->device == ANALOG_JOYSTICK_L || binding->device == ANALOG_JOYSTICK_R)
 		{
-				switch (binding.code)
+				switch (binding->code)
 				{
 					case AXIS_UP:
-						if (axisY >	0) binding.strength = axisY;
-						break;
+						if (axisY >	0) binding->strength = axisY;
+					break;
 					case AXIS_DOWN:
-						if (axisY < 0) binding.strength = -axisY;
-						break;
+						if (axisY < 0) binding->strength = -axisY;
+					break;
 					case AXIS_LEFT:
-						if (axisX < 0) binding.strength = -axisX;
-						break;
+						if (axisX < 0) binding->strength = -axisX;
+					break;
 					case AXIS_RIGHT:
-						if (axisX >	0) binding.strength = axisX;
-						break;
+						if (axisX >	0) binding->strength = axisX;
+					break;
 				}
 		}
 		
-		if (binding.strength != 0.0)
-			input.pressedActions |= 1 << i;
+		input->pressedActions [i] = (binding->strength != 0.0);
+		
+		#ifdef DEBUG_INPUT
+		
+		if (getButtonNow (input, (InputAction) i))
+			printf ("◌ %s\n", inputNames [i]);
+		
+		#endif
 	}
 }
 
-bool getButton (InputContext & input, InputAction button)
-{
-	return (input.mapping [button].strength != 0);
-}
-
-bool getButtonNow (InputContext & input, InputAction button)
-{
-	long mask = 1 << button;
-	return
-	(
-		mask & input.pressedActions &&
-		!(mask &	input.heldActions)
-	);
-}
-
-vec2 getNav (InputContext & input)
-{
-	return vec2
-	{
-		input.mapping [NAV_RIGHT].strength - input.mapping [NAV_LEFT].strength,
-		input.mapping [NAV_UP].strength - input.mapping [NAV_DOWN].strength
-	};
-}
-
-vec2 getPoint (InputContext & input)
-{
-	return vec2
-	{
-		input.mapping [POINT_RIGHT].strength - input.mapping [POINT_LEFT].strength,
-		input.mapping [POINT_UP].strength - input.mapping [POINT_DOWN].strength
-	};
-}
