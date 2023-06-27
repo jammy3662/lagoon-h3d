@@ -1,0 +1,10 @@
+(this is not a finished or final list)
+
+- GLFW
+low level management of render state and hardware
+
+- Assimp
+load models
+
+- Enet
+udp-based networking

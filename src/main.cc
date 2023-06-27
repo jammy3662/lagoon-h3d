@@ -19,14 +19,14 @@ int main (int argc, char** argv)
 	
 	Shader main = loadShaderSource ("shader/main.vs", "shader/main.fs");
 	
-	while (! render.shouldClose)
+	while (!render.shouldClose)
 	{
 		updateRenderContext (&render);
 		updateInputs (input);
 		
 		if (getButtonNow (input, InputAction::MENU))
 		{
-			paused = ! paused;
+			paused = !paused;
 			
 			if (paused)
 				releaseCursor (input);
