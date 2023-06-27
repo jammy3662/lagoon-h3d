@@ -2,20 +2,73 @@
 
 #include "backend.h"
 
-struct Shader
+#include <stdexcept>
+#include <unordered_map>
+
+struct Shader 
 {
 	int id;
+	
+	struct Uniform
+	{
+		int loc;
+		
+		void operator = (int i)
+		{
+			glUniform1i (loc, i);
+		}
+		
+		void operator = (float f)
+		{
+			glUniform1f (loc, f);
+		}
+		
+		void operator = (double d)
+		{
+			glUniform1f (loc, (float) d);
+		}
+		
+		void operator = (vec2 v2)
+		{
+			glUniform2f (loc, v2.x, v2.y);
+		}
+		
+		void operator = (vec3 v3)
+		{
+			glUniform3f (loc, v3.x, v3.y, v3.z);
+		}
+		
+		void operator = (vec4 v4)
+		{
+			glUniform4f (loc, v4.x, v4.y, v4.z, v4.w);
+		}
+	};
+	
+	std::unordered_map
+		<char*, Uniform> uniforms;
+
+	Uniform operator [] (char* name)
+	{
+		try
+		{
+			return uniforms.at (name);
+		}
+		catch (std::out_of_range _)
+		{
+			// the map will auto add the new element
+			Uniform u = uniforms [name];
+			u.loc = glGetUniformLocation (id, name);
+			if (u.loc == -1) fprintf (stderr, "[x] Uniform '%s' not found\n", name);
+			return u;
+		}
+	}
 };
 
 // load shader code from memory
 // (provide raw, null-terminated char pointers)
 Shader loadShader (char* vertexCode, char* fragmentCode)
 {
-	Shader s;
-	
-	int vertex, fragment;
-	
-	// vertex //
+	int vertex;
 	{
 		char errorLog [1024] = {0};
 		
@@ -26,7 +79,7 @@ Shader loadShader (char* vertexCode, char* fragmentCode)
 		if (errorLog [0]) fprintf (stderr, "%s\n", errorLog);
 	}
 	
-	// fragment //
+	int fragment;
 	{
 		char errorLog [1024] = {0};
 		
@@ -37,7 +90,7 @@ Shader loadShader (char* vertexCode, char* fragmentCode)
 		if (errorLog [0]) fprintf (stderr, "%s\n", errorLog);
 	}
 	
-	// final linking //
+	Shader s;
 	{
 		char errorLog [1024] = {0};
 		
@@ -53,80 +106,44 @@ Shader loadShader (char* vertexCode, char* fragmentCode)
 	return s;
 }
 
+char* fileToBuf (char* path)
+{
+	FILE* file = fopen (path, "r");
+	if (!file) return (char*) 0;
+	
+	char* buffer;
+	long len;
+	
+	fseek (file , 0, SEEK_END);
+	len = ftell (file);
+	rewind (file);
+
+	// use calloc, not malloc, to ensure a 0 byte at the end
+	buffer = (char*) calloc (len + 1, sizeof (char));
+	fread (buffer, len, sizeof (char), file);
+	
+	fclose (file);
+	
+	return buffer;
+}
+
 // load GLSL shader files
 Shader loadShaderSource (char* vertexPath, char* fragmentPath)
 {
 	Shader s;
 	
-	// vertex //
-	FILE* vFile = fopen (vertexPath, "r");
-	if (! vFile)
-		fprintf (stderr, "Can't open vertex shader '%s'\n", vertexPath);
+	char* vertex = fileToBuf (vertexPath);
+	if (!vertex) fprintf (stderr, "Can't open vertex shader '%s'\n", vertexPath);
 	
-	long vLen;
-	char* vBuffer;
-	
-	fseek (vFile , 0, SEEK_END);
-	vLen = ftell (vFile);
-	rewind (vFile);
+	char* fragment = fileToBuf (fragmentPath);
+	if (!fragment) fprintf (stderr, "Can't open fragment shader '%s'\n", fragmentPath);
 
-	vBuffer = (char*) calloc (vLen +	1, sizeof (char));
-	fread (vBuffer, vLen, sizeof (char), vFile);
-	
-	// fragment //
-	FILE * fFile = fopen (fragmentPath, "r");
-	if (! fFile)
-		fprintf (stderr, "Can't open fragment shader '%s'\n", fragmentPath);
-	
-	long fLen;
-	char* fBuffer;
-	
-	fseek (fFile , 0, SEEK_END);
-	fLen = ftell (fFile);
-	rewind (fFile);
+	s = loadShader (vertex, fragment);
 
-	fBuffer = (char*) calloc (fLen +	1, sizeof (char));
-	fread (fBuffer, fLen, sizeof (char), fFile);
+	fprintf (stdout, "[•] Compiled '%s' and '%s'\n", vertexPath, fragmentPath);
 
-	fprintf (stdout, "[…] Compiling '%s' and '%s'...\n", vertexPath, fragmentPath);
-	s = loadShader (vBuffer, fBuffer);
-	fprintf (stdout, "[✔] Compiled '%s' and '%s'\n", vertexPath, fragmentPath);
-
-	// file / buffer cleanup
-	fclose (vFile);
-	free (vBuffer);
-	fclose (fFile);
-	free (fBuffer);
+	free (vertex);
+	free (fragment);
 	
 	return s;
-}
-
-inline
-void setShaderInt (int i, char* uniform, Shader shader)
-{
-	glUniform1i (glGetUniformLocation (shader.id, uniform), i);
-}
-
-inline
-void setShaderFloat (float f, char* uniform, Shader shader)
-{
-	glUniform1f (glGetUniformLocation (shader.id, uniform), f);
-}
-
-inline
-void setShaderVec2 (float r, float g, char* uniform, Shader shader)
-{
-	glUniform2f (glGetUniformLocation (shader.id, uniform), r, g);
-}
-
-inline
-void setShaderVec3 (float r, float g, float b, char* uniform, Shader shader)
-{
-	glUniform3f (glGetUniformLocation (shader.id, uniform), r, g, b);
-}
-
-inline
-void setShaderVec4 (float r, float g, float b, float a, char* uniform, Shader shader)
-{
-	glUniform4f (glGetUniformLocation (shader.id, uniform), r, g, b, a);
 }

@@ -11,17 +11,17 @@
 
 int main (int argc, char** argv)
 {
-	RC render = createRenderContext ();
+	gpuInit ();
 	
-	Inputs* input = connectInput (render.window);
-	
-	int paused = 0;
+	Inputs* input = connectInput (gpu.window);
 	
 	Shader main = loadShaderSource ("shader/main.vs", "shader/main.fs");
 	
-	while (!render.shouldClose)
+	int paused = 0;
+	int open = 1;
+	
+	while (gpu.open)
 	{
-		updateRenderContext (&render);
 		updateInputs (input);
 		
 		if (getButtonNow (input, InputAction::MENU))
@@ -33,6 +33,12 @@ int main (int argc, char** argv)
 			else
 				captureCursor (input);
 		}
+		
+		glUseProgram (main.id);
+		
+		main["ambient"] = 0.5;
+		
+		gpuUpdate ();
 	}
 	
 	glfwTerminate ();
