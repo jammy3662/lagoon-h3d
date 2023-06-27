@@ -1,10 +1,13 @@
 (this is not a finished or final list)
 
+- GLAD
+driver level opengl interface
+
 - GLFW
 low level management of render state and hardware
 
 - Assimp
-load models
+load models and attached texture data
 
 - Enet
 udp-based networking
