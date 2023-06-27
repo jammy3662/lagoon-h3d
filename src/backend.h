@@ -24,7 +24,7 @@ gpu;
 
 void gpuInit ()
 {
-	if (! glfwInit())
+	if (!glfwInit())
 	{
 		fprintf (stderr, "GLFW failed to initialize OpenGL\n");
 		return;

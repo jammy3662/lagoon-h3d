@@ -13,7 +13,7 @@ int main (int argc, char** argv)
 {
 	gpuInit ();
 	
-	Inputs* input = connectInput (gpu.window);
+	inputInit ();
 	
 	Shader main = loadShaderSource ("shader/main.vs", "shader/main.fs");
 	
@@ -22,16 +22,16 @@ int main (int argc, char** argv)
 	
 	while (gpu.open)
 	{
-		updateInputs (input);
+		inputUpdate ();
 		
-		if (getButtonNow (input, InputAction::MENU))
+		if (getButtonNow (InputAction::MENU))
 		{
 			paused = !paused;
 			
 			if (paused)
-				releaseCursor (input);
+				releaseCursor ();
 			else
-				captureCursor (input);
+				captureCursor ();
 		}
 		
 		shader (main);

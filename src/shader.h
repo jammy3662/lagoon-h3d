@@ -55,7 +55,7 @@ struct Shader
 		}
 		catch (std::out_of_range _)
 		{
-			// the map will auto add the new element
+			// the map will auto-add the new element
 			Uniform u = uniforms [name];
 			u.loc = glGetUniformLocation (id, name);
 			if (u.loc == -1) fprintf (stderr, "[x] Uniform '%s' not found\n", name);
@@ -71,7 +71,7 @@ void shader (Shader s)
 }
 
 // load shader code from memory
-// (provide raw, null-terminated char pointers)
+// (raw, null-terminated char pointers)
 Shader loadShader (char* vertexCode, char* fragmentCode)
 {
 	int vertex;
