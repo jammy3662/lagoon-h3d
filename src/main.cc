@@ -34,14 +34,14 @@ int main (int argc, char** argv)
 				captureCursor (input);
 		}
 		
-		glUseProgram (main.id);
+		shader (main);
 		
 		main["ambient"] = 0.5;
 		
 		gpuUpdate ();
 	}
 	
-	glfwTerminate ();
+	gpuClose ();
 	
 	return 0;
 }

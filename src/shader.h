@@ -64,6 +64,12 @@ struct Shader
 	}
 };
 
+inline
+void shader (Shader s)
+{
+	glUseProgram (s.id);
+}
+
 // load shader code from memory
 // (provide raw, null-terminated char pointers)
 Shader loadShader (char* vertexCode, char* fragmentCode)
