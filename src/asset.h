@@ -9,7 +9,7 @@
 struct Texture
 {
 	int id;
-}
+};
 
 struct Material
 {
@@ -19,7 +19,33 @@ struct Material
 	
 	vec4 diffuse;
 	float shiny;
-	float roughness;
+	float reflection;
+};
+
+Texture loadAiTex (aiMaterial& mat)
+{
+	
+}
+
+Material loadAiMat (aiMaterial& mat)
+{
+	Material ret;
+	
+	aiColor3D diffuse;
+	float opacity;
+	
+	mat.Get (AI_MATKEY_COLOR_DIFFUSE, diffuse);
+	mat.Get (AI_MATKEY_OPACITY, opacity);
+	
+	ret.diffuse = vec4 {diffuse.r, diffuse.g, diffuse.b, opacity};
+	
+	mat.Get (AI_MATKEY_SHININESS, ret.shiny);
+	mat.Get (AI_MATKEY_REFLECTIVITY, ret.reflection);
+	
+	aiTexture texture;
+	mat.Get (AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), texture);
+	
+	return ret;
 }
 
 struct Mesh
@@ -35,11 +61,6 @@ struct Mesh
 	int vertexCt;
 };
 
-void loadAiMat (aiMaterial& mat)
-{
-	mat.Get (AI_MATKEY
-}
-
 Mesh importMesh (const char * filePath)
 {
 	using namespace Assimp;
@@ -53,5 +74,9 @@ Mesh importMesh (const char * filePath)
 		
 	aiNode *	root = scene->mRootNode;
 	
-	auto mat = scene->mMaterials[0];
+	for (int i = 0; i < scene->mNumMaterials; i++)
+	{
+		aiMaterial& mat = scene->mMaterials [i];
+		
+	}
 }

@@ -10,6 +10,7 @@ clang++ main.cc -o ../lagoon \
 	-DVERSION=\"$VERSION\" \
 	-DPLATFORM=\"$PLATFORM\" \
 \
+	-fcolor-diagnostics \
 	-g3 \
 	-Wno-c++11-narrowing -Wno-write-strings -Wno-reserved-user-defined-literal \
 \
@@ -17,7 +18,7 @@ clang++ main.cc -o ../lagoon \
 	-Llib \
 	-lGL -lglad -lglfw \
 	-lassimp \
-$@
+$@ 2>&1 >/dev/null | grep -E 'error'
 
 # capture clang error code
 SUCCESS=$?

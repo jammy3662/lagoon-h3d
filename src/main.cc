@@ -8,6 +8,7 @@
 #include "backend.h"
 #include "input.h"
 #include "shader.h"
+#include "asset.h"
 
 int main (int argc, char** argv)
 {
@@ -36,7 +37,10 @@ int main (int argc, char** argv)
 		
 		shader (main);
 		
-		main["ambient"] = 0.5;
+		main ["ambient"] = 0.15;
+		
+		main ["nearClip"] = 0.01;
+		main ["farClip"] = 1000.0;
 		
 		gpuUpdate ();
 	}

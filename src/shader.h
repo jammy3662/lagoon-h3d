@@ -45,18 +45,18 @@ struct Shader
 	};
 	
 	std::unordered_map
-		<char*, Uniform> uniforms;
+		<std::string, Uniform> uniforms;
 
 	Uniform operator [] (char* name)
 	{
 		try
 		{
-			return uniforms.at (name);
+			return uniforms.at (std::string(name));
 		}
 		catch (std::out_of_range _)
 		{
 			// the map will auto-add the new element
-			Uniform u = uniforms [name];
+			Uniform u = uniforms [std::string(name)];
 			u.loc = glGetUniformLocation (id, name);
 			if (u.loc == -1) fprintf (stderr, "[x] Uniform '%s' not found\n", name);
 			return u;
@@ -145,11 +145,11 @@ Shader loadShaderSource (char* vertexPath, char* fragmentPath)
 	if (!fragment) fprintf (stderr, "Can't open fragment shader '%s'\n", fragmentPath);
 
 	s = loadShader (vertex, fragment);
+	
+	free (vertex);
+	free (fragment);
 
 	fprintf (stdout, "[•] Compiled '%s' and '%s'\n", vertexPath, fragmentPath);
 
-	free (vertex);
-	free (fragment);
-	
 	return s;
 }
