@@ -3,7 +3,7 @@
 
 #include "define.h"
 
-//#define DEBUG_INPUT
+#define DEBUG_INPUT
 
 #include "backend.h"
 #include "input.h"

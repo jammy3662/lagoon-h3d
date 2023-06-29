@@ -349,14 +349,14 @@ void inputUpdate ()
 		
 		input.pressedActions [idx] = (binding.strength != 0.0);
 		
-		idx++;
-		
 		#ifdef DEBUG_INPUT
 		
-		if (getButtonNow (input, (InputAction) i))
-			printf ("◌ %s\n", inputNames [i]);
+		if (getButtonNow ((InputAction) idx))
+			printf ("◌ %s\n", inputNames [idx]);
 		
 		#endif
+		
+		idx++;
 	}
 }
 
