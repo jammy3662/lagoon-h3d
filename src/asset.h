@@ -33,6 +33,49 @@ Texture zUploadTex (int w, int h, char* texels)
 	return ret;
 }
 
+// pool of uploaded textures
+std::unordered_map
+	<std::string, Texture> zTextures;
+
+// load referenced/embedded textures from aiMaterial(s)
+Texture zLoadAiTex (aiTexture tex, const aiScene* scene)
+{
+	// remember loaded textures by load path
+	// avoid duplicate textures
+	
+	const char* file = tex.mFilename.C_Str();
+	
+	// grab previously loaded texture
+	try
+	{
+		return zTextures.at (std::string (file));
+	}
+	
+	// otherwise, new texture from image data
+	catch (std::out_of_range _)
+	{
+		// map allocates a new texture
+		Texture& ret = zTextures [std::string (file)];
+		
+		const aiTexture* data = scene->GetEmbeddedTexture (file);
+		
+		if (data != 0)
+		{
+			// pull texel data from embedded texture
+			ret = zUploadTex (data->mWidth, data->mHeight, (char*)data->pcData);
+		}
+		else
+		{
+			// texture is not embedded, search for a file on disk
+			// TODO:
+			
+			/*TEMP*/ret.id = (unsigned int) -1;
+		}
+		
+		return ret;
+	}
+}
+
 struct Material
 {
 	Texture texture;
@@ -44,68 +87,44 @@ struct Material
 	float reflection;
 };
 
-// load referenced/embedded textures from aiMaterial(s)
-Texture zLoadAiTex (aiTexture tex, const aiScene* scene)
-{
-	// remember loaded textures by load path
-	// avoid duplicate textures
-	
-	static std::unordered_map
-		<std::string, Texture> textures;
-	
-	const char* file = tex.mFilename.C_Str();
-	
-	// grab previously loaded texture
-	try
-	{
-		return textures.at (std::string (file));
-	}
-	
-	// new texture from image data
-	catch (std::out_of_range _)
-	{
-		// map allocates a new texture
-		Texture& ret = textures [std::string (file)];
-		
-		const aiTexture* data = scene->GetEmbeddedTexture (file);
-		
-		if (data != 0)
-		{
-			ret = zUploadTex (data->mWidth, data->mHeight, (char*)data->pcData);
-		}
-		else
-		{
-			// TODO:
-			// texture is not embedded, search for a file on disk
-		}
-		
-		return ret;
-	}
-}
+// loaded materials
+std::unordered_map
+	<std::string, Material> zMaterials;
 
 Material zLoadAiMat (aiMaterial& mat, const aiScene* scene)
 {
-	Material ret;
+	// retrieve stored material
+	try
+	{
+		return zMaterials.at (std::string (mat.GetName().C_Str ()));
+	}
 	
-	aiColor3D diffuse;
-	float opacity;
-	
-	mat.Get (AI_MATKEY_COLOR_DIFFUSE, diffuse);
-	mat.Get (AI_MATKEY_OPACITY, opacity);
-	
-	ret.diffuse = vec4 {diffuse.r, diffuse.g, diffuse.b, opacity};
-	
-	mat.Get (AI_MATKEY_SHININESS, ret.shiny);
-	mat.Get (AI_MATKEY_REFLECTIVITY, ret.reflection);
-	
-	aiTexture texture;
-	mat.Get (AI_MATKEY_TEXTURE (aiTextureType_DIFFUSE, 0), texture);
-	ret.texture = zLoadAiTex (texture, scene);
-	
-	mat.Get (AI_MATKEY_TEXTURE (aiTextureType_NORMALS, 0), texture);
-	ret.normals = zLoadAiTex (texture, scene);
-	
-	return ret;
+	// populate new material with importer data
+	catch (std::out_of_range _)
+	{
+		Material ret;
+		
+		aiColor3D diffuse;
+		float opacity;
+		
+		mat.Get (AI_MATKEY_COLOR_DIFFUSE, diffuse);
+		mat.Get (AI_MATKEY_OPACITY, opacity);
+		
+		ret.diffuse = vec4 {diffuse.r, diffuse.g, diffuse.b, opacity};
+		
+		mat.Get (AI_MATKEY_SHININESS, ret.shiny);
+		mat.Get (AI_MATKEY_REFLECTIVITY, ret.reflection);
+		
+		aiTexture texture;
+		mat.Get (AI_MATKEY_TEXTURE (aiTextureType_DIFFUSE, 0), texture);
+		ret.texture = zLoadAiTex (texture, scene);
+		
+		// re-use the aiTexture struct from before to save space and time
+		mat.Get (AI_MATKEY_TEXTURE (aiTextureType_NORMALS, 0), texture);
+		ret.normals = zLoadAiTex (texture, scene);
+		
+		return ret;
+	}
 }
 
 struct Mesh
