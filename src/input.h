@@ -183,8 +183,8 @@ struct
 	
 	Mapping mapping = mouseAndKeyboard;
 	
-	bool pressedActions [INPUT_ACTION_CT];
-	bool heldActions [INPUT_ACTION_CT];
+	std::array <bool, INPUT_ACTION_CT> pressedActions;
+	std::array <bool, INPUT_ACTION_CT> heldActions;
 }
 input;
 
@@ -263,13 +263,9 @@ void inputUpdate ()
 	input.lastMouseY = my;
 	
 	// store state from last frame
-	memcpy
-	(
-		input.heldActions, input.pressedActions,
-		INPUT_ACTION_CT * sizeof (bool)
-	);
+	input.heldActions = input.pressedActions;
 	// clean state to read next inputs
-	memset (input.pressedActions, 0, INPUT_ACTION_CT * sizeof (bool));
+	input.pressedActions.fill (false);
 	
 	int idx = 0;
 	
