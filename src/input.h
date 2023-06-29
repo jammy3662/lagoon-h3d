@@ -51,19 +51,6 @@ enum AnalogCode
 	AXIS_RIGHT,
 };
 
-struct InputScalar
-{
-	int device;
-	int code;
-	double strength;
-};
-
-struct InputVector
-{
-	InputScalar down, up;
-	InputScalar left, right;
-};
-
 enum InputAction
 {
 	ACCEPT,
@@ -108,7 +95,20 @@ const char * inputNames [] =
 
 #endif
 
-typedef std::array<InputScalar, INPUT_ACTION_CT> Mapping;
+struct zInputScalar
+{
+	int device;
+	int code;
+	double strength;
+};
+
+struct zInputVector
+{
+	zInputScalar down, up;
+	zInputScalar left, right;
+};
+
+typedef std::array <zInputScalar, INPUT_ACTION_CT> Mapping;
 
 Mapping mouseAndKeyboard =
 {{
@@ -189,7 +189,7 @@ struct
 input;
 
 // only way to access scroll input is through a callback
-void inputScrollCallback (GLFWwindow* window, double x, double y)
+void zInputScrollCallback (GLFWwindow* window, double x, double y)
 {
 	input.glfwScrollX = x;
 	input.glfwScrollY = y;
@@ -239,7 +239,7 @@ void inputInit ()
 	
 	// TODO: load saved controls from file
 	
-	glfwSetScrollCallback (input.window, inputScrollCallback);
+	glfwSetScrollCallback (input.window, zInputScrollCallback);
 	
 	if (glfwRawMouseMotionSupported ())
 	{
@@ -274,7 +274,7 @@ void inputUpdate ()
 	int idx = 0;
 	
 	// update each binding as per configuration
-	for (InputScalar& binding : input.mapping)
+	for (zInputScalar& binding : input.mapping)
 	{
 		binding.strength = 0.0;
 		

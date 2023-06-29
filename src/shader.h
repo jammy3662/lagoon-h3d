@@ -51,12 +51,12 @@ struct Shader
 	{
 		try
 		{
-			return uniforms.at (std::string(name));
+			return uniforms.at (std::string (name));
 		}
 		catch (std::out_of_range _)
 		{
 			// the map will auto-add the new element
-			Uniform u = uniforms [std::string(name)];
+			Uniform& u = uniforms [std::string (name)];
 			u.loc = glGetUniformLocation (id, name);
 			if (u.loc == -1) fprintf (stderr, "[x] Uniform '%s' not found\n", name);
 			return u;
@@ -72,7 +72,7 @@ void shader (Shader s)
 
 // load shader code from memory
 // (raw, null-terminated char pointers)
-Shader loadShader (char* vertexCode, char* fragmentCode)
+Shader zLoadShader (char* vertexCode, char* fragmentCode)
 {
 	int vertex;
 	{
@@ -112,7 +112,7 @@ Shader loadShader (char* vertexCode, char* fragmentCode)
 	return s;
 }
 
-char* fileToBuf (char* path)
+char* zFileToBuf (char* path)
 {
 	FILE* file = fopen (path, "r");
 	if (!file) return (char*) 0;
@@ -138,13 +138,13 @@ Shader loadShaderSource (char* vertexPath, char* fragmentPath)
 {
 	Shader s;
 	
-	char* vertex = fileToBuf (vertexPath);
+	char* vertex = zFileToBuf (vertexPath);
 	if (!vertex) fprintf (stderr, "Can't open vertex shader '%s'\n", vertexPath);
 	
-	char* fragment = fileToBuf (fragmentPath);
+	char* fragment = zFileToBuf (fragmentPath);
 	if (!fragment) fprintf (stderr, "Can't open fragment shader '%s'\n", fragmentPath);
 
-	s = loadShader (vertex, fragment);
+	s = zLoadShader (vertex, fragment);
 	
 	free (vertex);
 	free (fragment);
