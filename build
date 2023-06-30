@@ -18,7 +18,7 @@ clang++ main.cc -o ../lagoon \
 	-Llib \
 	-lGL -lglad -lglfw \
 	-lassimp \
-$@ 2>&1 >/dev/null | grep -E 'error'
+$@ #2>&1 >/dev/null | grep -E 'error'
 
 # capture clang error code
 SUCCESS=$?

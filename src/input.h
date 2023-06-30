@@ -7,13 +7,12 @@
 
 enum InputDevice
 {
-	BUTTON_KEY,
-	BUTTON_MOUSE,
-	BUTTON_GAMEPAD,
-	ANALOG_MOUSE, // cursor movement
-	ANALOG_SCROLL, // scroll wheel
-	ANALOG_JOYSTICK_L,
-	ANALOG_JOYSTICK_R
+	KEYBOARD,
+	CLICK,
+	GAMEPAD,
+	MOUSE_MOVE, // cursor movement
+	MOUSE_SCROLL, // scroll wheel
+	JOYSTICK,
 };
 
 enum MouseCode
@@ -49,6 +48,12 @@ enum AnalogCode
 	AXIS_DOWN,
 	AXIS_LEFT,
 	AXIS_RIGHT,
+	
+	// left joystick only
+	AXIS_NORTH,
+	AXIS_SOUTH,
+	AXIS_WEST,
+	AXIS_EAST,
 };
 
 enum InputAction
@@ -102,70 +107,64 @@ struct zInputScalar
 	double strength;
 };
 
-struct zInputVector
-{
-	zInputScalar down, up;
-	zInputScalar left, right;
-};
-
 typedef std::array <zInputScalar, INPUT_ACTION_CT> Mapping;
 
 Mapping mouseAndKeyboard =
 {{
-	{.device = BUTTON_KEY, .code = GLFW_KEY_SPACE},
-	{.device = BUTTON_KEY, .code = GLFW_KEY_F},
-	{.device = BUTTON_KEY, .code = GLFW_KEY_TAB},
-	{.device = BUTTON_KEY, .code = GLFW_KEY_Q},
+	{.device = KEYBOARD, .code = GLFW_KEY_SPACE},
+	{.device = KEYBOARD, .code = GLFW_KEY_F},
+	{.device = KEYBOARD, .code = GLFW_KEY_TAB},
+	{.device = KEYBOARD, .code = GLFW_KEY_Q},
 	
-	{.device = BUTTON_KEY, .code = GLFW_KEY_ESCAPE},
+	{.device = KEYBOARD, .code = GLFW_KEY_ESCAPE},
 	
-	{.device = BUTTON_MOUSE, .code = MOUSE_LEFT},
-	{.device = BUTTON_MOUSE, .code = MOUSE_RIGHT},
-	{.device = BUTTON_KEY, .code = GLFW_KEY_LEFT_SHIFT},
+	{.device = CLICK, .code = MOUSE_LEFT},
+	{.device = CLICK, .code = MOUSE_RIGHT},
+	{.device = KEYBOARD, .code = GLFW_KEY_LEFT_SHIFT},
 	
-	{.device = BUTTON_KEY, .code = GLFW_KEY_2},
-	{.device = BUTTON_KEY, .code = GLFW_KEY_3},
-	{.device = BUTTON_KEY, .code = GLFW_KEY_4},
-	{.device = BUTTON_KEY, .code = GLFW_KEY_1},
+	{.device = KEYBOARD, .code = GLFW_KEY_2},
+	{.device = KEYBOARD, .code = GLFW_KEY_3},
+	{.device = KEYBOARD, .code = GLFW_KEY_4},
+	{.device = KEYBOARD, .code = GLFW_KEY_1},
 	
-	{.device = BUTTON_KEY, .code = GLFW_KEY_W},
-	{.device = BUTTON_KEY, .code = GLFW_KEY_S},
-	{.device = BUTTON_KEY, .code = GLFW_KEY_A},
-	{.device = BUTTON_KEY, .code = GLFW_KEY_D},
+	{.device = KEYBOARD, .code = GLFW_KEY_W},
+	{.device = KEYBOARD, .code = GLFW_KEY_S},
+	{.device = KEYBOARD, .code = GLFW_KEY_A},
+	{.device = KEYBOARD, .code = GLFW_KEY_D},
 	
-	{.device = ANALOG_MOUSE, .code = AXIS_UP},
-	{.device = ANALOG_MOUSE, .code = AXIS_DOWN},
-	{.device = ANALOG_MOUSE, .code = AXIS_LEFT},
-	{.device = ANALOG_MOUSE, .code = AXIS_RIGHT},
+	{.device = MOUSE_MOVE, .code = AXIS_UP},
+	{.device = MOUSE_MOVE, .code = AXIS_DOWN},
+	{.device = MOUSE_MOVE, .code = AXIS_LEFT},
+	{.device = MOUSE_MOVE, .code = AXIS_RIGHT},
 }};
 
 Mapping gamepadAndJoystick =
 {{
-	{.device = BUTTON_GAMEPAD, .code = A_BUT},
-	{.device = BUTTON_GAMEPAD, .code = B_BUT},
-	{.device = BUTTON_GAMEPAD, .code = X_BUT},
-	{.device = BUTTON_GAMEPAD, .code = Y_BUT},
+	{.device = GAMEPAD, .code = A_BUT},
+	{.device = GAMEPAD, .code = B_BUT},
+	{.device = GAMEPAD, .code = X_BUT},
+	{.device = GAMEPAD, .code = Y_BUT},
 	
-	{.device = BUTTON_GAMEPAD, .code = START_BUT},
+	{.device = GAMEPAD, .code = START_BUT},
 	
-	{.device = BUTTON_GAMEPAD, .code = ZR_BUT},
-	{.device = BUTTON_GAMEPAD, .code = R_BUT},
-	{.device = BUTTON_GAMEPAD, .code = ZL_BUT},
+	{.device = GAMEPAD, .code = ZR_BUT},
+	{.device = GAMEPAD, .code = R_BUT},
+	{.device = GAMEPAD, .code = ZL_BUT},
 	
-	{.device = BUTTON_GAMEPAD, .code = UP_BUT},
-	{.device = BUTTON_GAMEPAD, .code = DOWN_BUT},
-	{.device = BUTTON_GAMEPAD, .code = LEFT_BUT},
-	{.device = BUTTON_GAMEPAD, .code = RIGHT_BUT},
+	{.device = GAMEPAD, .code = UP_BUT},
+	{.device = GAMEPAD, .code = DOWN_BUT},
+	{.device = GAMEPAD, .code = LEFT_BUT},
+	{.device = GAMEPAD, .code = RIGHT_BUT},
 	
-	{.device = ANALOG_JOYSTICK_L, .code = AXIS_UP},
-	{.device = ANALOG_JOYSTICK_L, .code = AXIS_DOWN},
-	{.device = ANALOG_JOYSTICK_L, .code = AXIS_LEFT},
-	{.device = ANALOG_JOYSTICK_L, .code = AXIS_RIGHT},
+	{.device = JOYSTICK, .code = AXIS_NORTH},
+	{.device = JOYSTICK, .code = AXIS_SOUTH},
+	{.device = JOYSTICK, .code = AXIS_WEST},
+	{.device = JOYSTICK, .code = AXIS_RIGHT},
 	
-	{.device = ANALOG_JOYSTICK_R, .code = AXIS_UP},
-	{.device = ANALOG_JOYSTICK_R, .code = AXIS_DOWN},
-	{.device = ANALOG_JOYSTICK_R, .code = AXIS_LEFT},
-	{.device = ANALOG_JOYSTICK_R, .code = AXIS_RIGHT},
+	{.device = JOYSTICK, .code = AXIS_UP},
+	{.device = JOYSTICK, .code = AXIS_DOWN},
+	{.device = JOYSTICK, .code = AXIS_LEFT},
+	{.device = JOYSTICK, .code = AXIS_RIGHT},
 }};
 
 struct
@@ -207,7 +206,7 @@ void captureCursor ()
 
 bool getButton (InputAction button)
 {
-	return (input.mapping [button].strength != 0);
+	return (input.pressedActions [button]);
 }
 
 bool getButtonNow (InputAction button)
@@ -254,13 +253,19 @@ void inputUpdate ()
 {
 	glfwPollEvents ();
 	
+	glfwGetGamepadState (input.gamepadIdx, & input.gamepad);
+	
 	// retrieve cursor data
-	static double mx, my;
-	glfwGetCursorPos (input.window, &mx, &my);
-	input.mouseX = mx - input.lastMouseX;
-	input.mouseY = my - input.lastMouseY;
-	input.lastMouseX = mx;
-	input.lastMouseY = my;
+	{
+		static double x, y;
+		glfwGetCursorPos (input.window, &x, &y);
+		
+		input.mouseX = x - input.lastMouseX;
+		input.lastMouseX = x;
+		
+		input.mouseY = y - input.lastMouseY;
+		input.lastMouseY = y;
+	}
 	
 	// store state from last frame
 	input.heldActions = input.pressedActions;
@@ -274,73 +279,69 @@ void inputUpdate ()
 	{
 		binding.strength = 0.0;
 		
-		static int button;
-		static double axisX, axisY;
-		
 		switch (binding.device)
 		{
-			case BUTTON_KEY:
+			int button;
+			case KEYBOARD:
 				button = glfwGetKey (input.window, binding.code);
 				if (button == GLFW_PRESS) binding.strength = 1.0;
 			break;
 			
-			case BUTTON_GAMEPAD:
-				glfwGetGamepadState (input.gamepadIdx, & input.gamepad);
+			case GAMEPAD:
 				if (binding.code == ZL_BUT)
-				{
 					binding.strength = input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
-					break;
-				}
-				if (binding.code == ZR_BUT)
-				{
+				else if (binding.code == ZR_BUT)
 					binding.strength = input.gamepad.axes [GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
-					break;
-				}
-				if (input.gamepad.buttons [binding.code])
+				else if (input.gamepad.buttons [binding.code])
 					binding.strength = 1.0;
 			break;
 			
-			case BUTTON_MOUSE:
+			case CLICK:
 				button = glfwGetMouseButton (input.window, binding.code);
 				if (button == GLFW_PRESS) binding.strength = 1.0;
 			break;
 			
-			case ANALOG_MOUSE:
-				axisX = input.mouseX;
-				axisY = input.mouseY;
+			case MOUSE_MOVE:
+				if (binding.code == AXIS_UP)
+					binding.strength = abs (MIN (input.mouseY, 0));
+				else if (binding.code == AXIS_DOWN)
+					binding.strength = MAX (0, input.mouseY);
+				else if (binding.code == AXIS_LEFT)
+					binding.strength = abs (MIN (input.mouseX, 0));
+				else if (binding.code == AXIS_RIGHT)
+					binding.strength = MAX (input.mouseX, 0);
 			break;
-			case ANALOG_SCROLL:
-				axisX = input.glfwScrollX;
-				axisY = input.glfwScrollY;
+			
+			case MOUSE_SCROLL:
+				if (binding.code == AXIS_UP)
+					binding.strength = abs (MIN (input.glfwScrollY, 0));
+				else if (binding.code == AXIS_DOWN)
+					binding.strength = MAX (0, input.glfwScrollY);
+				else if (binding.code == AXIS_LEFT)
+					binding.strength = abs (MIN (input.glfwScrollX, 0));
+				else if (binding.code == AXIS_RIGHT)
+					binding.strength = MAX (input.glfwScrollX, 0);
 			break;
-			case ANALOG_JOYSTICK_L:
-				axisX = input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_X];
-				axisY = input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_Y];
+			
+			case JOYSTICK:
+				if (binding.code == AXIS_UP)
+					binding.strength = abs (MIN (input.mouseY, 0));
+				else if (binding.code == AXIS_DOWN)
+					binding.strength = MAX (0, input.mouseY);
+				else if (binding.code == AXIS_LEFT)
+					binding.strength = abs (MIN (input.mouseX, 0));
+				else if (binding.code == AXIS_RIGHT)
+					binding.strength = MAX (input.mouseX, 0);
+				
+				if (binding.code == AXIS_NORTH)
+					binding.strength = abs (MIN (input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_Y], 0));
+				else if (binding.code == AXIS_SOUTH)
+					binding.strength = MAX (0, input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_Y]);
+				else if (binding.code == AXIS_WEST)
+					binding.strength = abs (MIN (input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_X], 0));
+				else if (binding.code == AXIS_EAST)
+					binding.strength = MAX (input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_X], 0);
 			break;
-			case ANALOG_JOYSTICK_R:
-				axisX = input.gamepad.axes [GLFW_GAMEPAD_AXIS_RIGHT_X];
-				axisY = input.gamepad.axes [GLFW_GAMEPAD_AXIS_RIGHT_Y];
-			break;
-		}
-		
-		if (binding.device == ANALOG_MOUSE || binding.device == ANALOG_SCROLL ||
-			binding.device == ANALOG_JOYSTICK_L || binding.device == ANALOG_JOYSTICK_R)
-		{
-				switch (binding.code)
-				{
-					case AXIS_UP:
-						if (axisY >	0) binding.strength = axisY;
-					break;
-					case AXIS_DOWN:
-						if (axisY < 0) binding.strength = -axisY;
-					break;
-					case AXIS_LEFT:
-						if (axisX < 0) binding.strength = -axisX;
-					break;
-					case AXIS_RIGHT:
-						if (axisX >	0) binding.strength = axisX;
-					break;
-				}
 		}
 		
 		input.pressedActions [idx] = (binding.strength != 0.0);
