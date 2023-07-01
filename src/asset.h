@@ -7,10 +7,17 @@
 #include <assimp/postprocess.h>
 
 #include <unordered_map>
+#include <vector>
+#include <string_view>
 
 struct Texture
 {
-	unsigned int id = (unsigned int)-1;
+	unsigned int id;
+	
+	Texture ()
+	{
+		id = 0;
+	}
 };
 
 Texture zUploadTex (int w, int h, char* texels)
@@ -23,7 +30,9 @@ Texture zUploadTex (int w, int h, char* texels)
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 	
+	// nearest neighbor for shrinking, interpolate mipmap level
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+	// linear for expanding, interpolate mipmap level
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	
 	glTexImage2D (GL_TEXTURE_2D, 2, GL_RGBA, w, h,
@@ -61,6 +70,7 @@ Texture zLoadAiTex (aiTexture tex, const aiScene* scene)
 		
 		if (data != 0)
 		{
+			printf ("found texture '%s'\n", file);
 			// pull texel data from embedded texture
 			ret = zUploadTex (data->mWidth, data->mHeight, (char*)data->pcData);
 		}
@@ -70,6 +80,7 @@ Texture zLoadAiTex (aiTexture tex, const aiScene* scene)
 			// TODO:
 			
 			/*TEMP*/ret.id = (unsigned int) -1;
+			printf("can't find texture '%s'\n", file);
 		}
 		
 		return ret;
@@ -96,13 +107,16 @@ Material zLoadAiMat (aiMaterial& mat, const aiScene* scene)
 	// retrieve stored material
 	try
 	{
+		printf("found! '%s'\n", mat.GetName().C_Str ());
 		return zMaterials.at (std::string (mat.GetName().C_Str ()));
 	}
 	
 	// populate new material with importer data
 	catch (std::out_of_range _)
 	{
-		Material ret;
+		printf("new! '%s'\n", mat.GetName().C_Str ());
+		
+		Material& ret = zMaterials [std::string (mat.GetName().C_Str ())];
 		
 		aiColor3D diffuse;
 		float opacity;
@@ -129,33 +143,159 @@ Material zLoadAiMat (aiMaterial& mat, const aiScene* scene)
 
 struct Mesh
 {
-	float * positions;
-	float * normals;
-	char * colors;
-	float * uv0;
-	float * uv1;
-	float * tangents;
-	unsigned short * faces;
+	unsigned int vao;
+	unsigned int vbo, ebo;
 	
-	int vertexCt;
+	struct Vertex
+	{
+		struct {float x,y,z; } position;
+		struct {float x,y,z; } normal;
+		struct {unsigned char r,g,b,a; } color;
+		struct {float x,y; } uv0;
+		struct {float x,y; } uv1;
+		struct {float x,y,z; } tangent;
+	};
+	
+	std::vector <Vertex> vertices;
+	
+	struct Face
+	{
+		unsigned short a, b, c;
+	};
+	
+	std::vector <Face> faces;
+	
+	int materialI; // material index
 };
 
-Mesh importMesh (const char * filePath)
+Mesh zLoadAiMesh (aiMesh& mesh)
 {
-	using namespace Assimp;
+	Mesh ret;
 	
+	ret.vertices.reserve (mesh.mNumVertices);
+	
+	for (int i = 0; i < ret.vertices.size(); i++)
+	{
+		auto& position = ret.vertices [i].position;
+		position.x = mesh.mVertices [i].x;
+		position.y = mesh.mVertices [i].y;
+		position.z = mesh.mVertices [i].z;
+		
+		auto& normal = ret.vertices [i].normal;
+		normal.x = mesh.mNormals [i].x;
+		normal.x = mesh.mNormals [i].y;
+		normal.x = mesh.mNormals [i].z;
+		
+		auto& color = ret.vertices [i].color;
+		color.r = (unsigned char) (255 * mesh.mColors [i]->r);
+		color.g = (unsigned char) (255 * mesh.mColors [i]->g);
+		color.b = (unsigned char) (255 * mesh.mColors [i]->b);
+		color.a = (unsigned char) (255 * mesh.mColors [i]->a);
+		
+		auto& uv0 = ret.vertices [i].uv0;
+		uv0.x = mesh.mTextureCoords [0][i].x;
+		uv0.y = mesh.mTextureCoords [0][i].y;
+		
+		if (mesh.HasTextureCoords (1))
+		{
+			auto& uv1 = ret.vertices [i].uv1;
+			uv1.x = mesh.mTextureCoords [1][i].x;
+			uv1.y = mesh.mTextureCoords [1][i].y;
+		}
+		
+		auto& tangent = ret.vertices [i].tangent;
+		tangent.x = mesh.mTangents [i].x;
+		tangent.y = mesh.mTangents [i].y;
+		tangent.z = mesh.mTangents [i].z;
+	}
+	
+	ret.faces.reserve (mesh.mNumFaces);
+	
+	for (int i = 0; i < ret.faces.size(); i++)
+	{
+		Mesh::Face& face = ret.faces [i];
+		face.a = mesh.mFaces [i].mIndices [0];
+		face.b = mesh.mFaces [i].mIndices [1];
+		face.c = mesh.mFaces [i].mIndices [2];
+	}
+	
+	glGenVertexArrays (1, &ret.vao);
+	glGenBuffers (2, &ret.vbo);
+	
+	glBindVertexArray (ret.vao);
+	
+	glBindBuffer (GL_ARRAY_BUFFER, ret.vbo);
+	glBufferData (GL_ARRAY_BUFFER, ret.vertices.size() * sizeof (Mesh::Vertex), ret.vertices.data(), GL_STATIC_DRAW);
+	
+	glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, ret.ebo);
+	glBufferData (GL_ELEMENT_ARRAY_BUFFER, ret.faces.size() * sizeof (Mesh::Face), ret.faces.data(), GL_STATIC_DRAW);
+	
+	glEnableVertexAttribArray (0);
+	glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, sizeof (Mesh::Vertex), (void*) offsetof (Mesh::Vertex, position));
+	glEnableVertexAttribArray (1);
+	glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, sizeof (Mesh::Vertex), (void*) offsetof (Mesh::Vertex, normal));
+	glEnableVertexAttribArray (2);
+	glVertexAttribPointer (0, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof (Mesh::Vertex), (void*) offsetof (Mesh::Vertex, position));
+	glEnableVertexAttribArray (3);
+	glVertexAttribPointer (0, 2, GL_FLOAT, GL_FALSE, sizeof (Mesh::Vertex), (void*) offsetof (Mesh::Vertex, uv0));
+	
+	if (mesh.HasTextureCoords (1))
+	{
+		glEnableVertexAttribArray (4);
+		glVertexAttribPointer (0, 2, GL_FLOAT, GL_FALSE, sizeof (Mesh::Vertex), (void*) offsetof (Mesh::Vertex, uv1));
+	}
+	
+	glEnableVertexAttribArray (5);
+	glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, sizeof (Mesh::Vertex), (void*) offsetof (Mesh::Vertex, tangent));
+	
+	glBindVertexArray (0);
+	
+	ret.vertices.clear();
+	ret.faces.clear();
+	
+	return ret;
+}
+
+struct Model
+{
+	std::vector <Material> materials;
+	std::vector <Mesh> meshes;
+};
+
+Model loadMesh (const char * filePath)
+{
+	Model ret;
+	
+	using namespace Assimp;
 	Importer importer;
-	const aiScene * scene;
+	const aiScene* scene;
+	aiNode* root;
 	
 	scene = importer.ReadFile (filePath, 
-		aiProcess_Triangulate || aiProcess_FlipUVs ||
-		aiProcess_GenNormals);
+		aiProcess_Triangulate ||
+		aiProcess_GenNormals || aiProcess_CalcTangentSpace ||
+		aiProcess_GenUVCoords || aiProcess_FlipUVs);
 		
-	aiNode *	root = scene->mRootNode;
+	root = scene->mRootNode;
 	
+	ret.materials.reserve (scene->mNumMaterials);
+	ret.meshes.reserve (scene->mNumMeshes);
+	
+	// grab materials and associated textures
 	for (int i = 0; i < scene->mNumMaterials; i++)
 	{
 		aiMaterial& mat = *scene->mMaterials [i];
-		zLoadAiMat (mat, scene);
+		ret.materials [i] = zLoadAiMat (mat, scene);
 	}
+	
+	// TODO: modify this to preserve the node hierarchy present in the original model
+	for (int i = 0; i < scene->mNumMeshes; i++)
+	{
+		aiMesh& data = *scene->mMeshes [i];
+		Mesh mesh = zLoadAiMesh (data);
+		mesh.materialI = data.mMaterialIndex;
+		ret.meshes [i] = mesh;
+	}
+	
+	return ret;
 }

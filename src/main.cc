@@ -18,6 +18,8 @@ int main (int argc, char** argv)
 	
 	Shader main = loadShaderSource ("shader/main.vs", "shader/main.fs");
 	
+	Model thing = loadMesh ("mesh/thing.glb");
+	
 	int paused = 0;
 	int open = 1;
 	
