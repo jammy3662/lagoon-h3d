@@ -47,12 +47,13 @@ std::unordered_map
 	<std::string, Texture> zTextures;
 
 // load referenced/embedded textures from aiMaterial(s)
-Texture zLoadAiTex (aiTexture tex, const aiScene* scene)
+Texture zLoadAiTex (aiTexture& tex, const aiScene* scene)
 {
 	// remember loaded textures by load path
 	// avoid duplicate textures
 	
 	const char* file = tex.mFilename.C_Str();
+	//printf ("[?] '%s'\n", file);
 	
 	// grab previously loaded texture
 	try
@@ -70,9 +71,11 @@ Texture zLoadAiTex (aiTexture tex, const aiScene* scene)
 		
 		if (data != 0)
 		{
-			printf ("found texture '%s'\n", file);
+			printf ("loaded new texture '%s'\n", file);
+			//printf ("\t'%s'\n", data->mFilename.C_Str ());
 			// pull texel data from embedded texture
 			ret = zUploadTex (data->mWidth, data->mHeight, (char*)data->pcData);
+			//printf("inner %i\n", ret.id);
 		}
 		else
 		{
@@ -80,7 +83,7 @@ Texture zLoadAiTex (aiTexture tex, const aiScene* scene)
 			// TODO:
 			
 			/*TEMP*/ret.id = (unsigned int) -1;
-			printf("can't find texture '%s'\n", file);
+			fprintf(stderr, "can't find texture '%s'\n", file);
 		}
 		
 		return ret;
@@ -91,7 +94,7 @@ struct Material
 {
 	Texture texture;
 	Texture normals;
-	Texture specular; // (curr. unsupported)
+	// Texture specular; // (curr. unsupported)
 	
 	vec4 diffuse;
 	float shiny;
@@ -107,7 +110,6 @@ Material zLoadAiMat (aiMaterial& mat, const aiScene* scene)
 	// retrieve stored material
 	try
 	{
-		printf("found! '%s'\n", mat.GetName().C_Str ());
 		return zMaterials.at (std::string (mat.GetName().C_Str ()));
 	}
 	
@@ -129,13 +131,26 @@ Material zLoadAiMat (aiMaterial& mat, const aiScene* scene)
 		mat.Get (AI_MATKEY_SHININESS, ret.shiny);
 		mat.Get (AI_MATKEY_REFLECTIVITY, ret.reflection);
 		
-		aiTexture texture;
-		mat.Get (AI_MATKEY_TEXTURE (aiTextureType_DIFFUSE, 0), texture);
-		ret.texture = zLoadAiTex (texture, scene);
+		if (mat.GetTextureCount (aiTextureType_DIFFUSE) > 0)
+		{
+			aiTexture texture;
+			mat.Get (AI_MATKEY_TEXTURE (aiTextureType_BASE_COLOR, 0), texture);
+			
+			printf ("'%s' -> '%s'\n", mat.GetName().C_Str (), texture.mFilename.C_Str ());
+			
+			ret.texture = zLoadAiTex (texture, scene);
+			//printf("outer %i\n", ret.texture.id);
+		}
 		
-		// re-use the aiTexture struct from before to save space and time
-		mat.Get (AI_MATKEY_TEXTURE (aiTextureType_NORMALS, 0), texture);
-		ret.normals = zLoadAiTex (texture, scene);
+		if (mat.GetTextureCount (aiTextureType_NORMALS) > 0)
+		{
+			aiTexture texture;
+			mat.Get (AI_MATKEY_TEXTURE (aiTextureType_NORMALS, 0), texture);
+			
+			printf ("'%s' -> '%s'\n", mat.GetName().C_Str (), texture.mFilename.C_Str ());
+			
+			ret.normals = zLoadAiTex (texture, scene);
+		}
 		
 		return ret;
 	}
@@ -281,7 +296,13 @@ Model loadMesh (const char * filePath)
 	ret.materials.reserve (scene->mNumMaterials);
 	ret.meshes.reserve (scene->mNumMeshes);
 	
-	// grab materials and associated textures
+	for (int i = 0; i < scene->mNumTextures; i++)
+	{
+		aiTexture* texture = scene->mTextures [i]; 
+		zLoadAiTex (*texture, scene);
+	}
+	
+	// grab materials
 	for (int i = 0; i < scene->mNumMaterials; i++)
 	{
 		aiMaterial& mat = *scene->mMaterials [i];
