@@ -6,6 +6,9 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+#define CGLTF_IMPLEMENTATION
+#include "../include/cgltf.h"
+
 #include <unordered_map>
 #include <vector>
 #include <string_view>
@@ -94,11 +97,11 @@ struct Material
 {
 	Texture texture;
 	Texture normals;
-	// Texture specular; // (curr. unsupported)
+	Texture specular; // (curr. unsupported)
 	
-	vec4 diffuse;
 	float shiny;
 	float reflection;
+	float roughness;
 };
 
 // loaded materials
@@ -126,17 +129,19 @@ Material zLoadAiMat (aiMaterial& mat, const aiScene* scene)
 		mat.Get (AI_MATKEY_COLOR_DIFFUSE, diffuse);
 		mat.Get (AI_MATKEY_OPACITY, opacity);
 		
-		ret.diffuse = vec4 {diffuse.r, diffuse.g, diffuse.b, opacity};
+		//ret.diffuse = vec4 {diffuse.r, diffuse.g, diffuse.b, opacity};
 		
 		mat.Get (AI_MATKEY_SHININESS, ret.shiny);
 		mat.Get (AI_MATKEY_REFLECTIVITY, ret.reflection);
 		
-		if (mat.GetTextureCount (aiTextureType_DIFFUSE) > 0)
+		if (mat.GetTextureCount (aiTextureType_BASE_COLOR) > 0)
 		{
 			aiTexture texture;
 			mat.Get (AI_MATKEY_TEXTURE (aiTextureType_BASE_COLOR, 0), texture);
 			
-			printf ("'%s' -> '%s'\n", mat.GetName().C_Str (), texture.mFilename.C_Str ());
+			//mat.Get ("$pbrMetallicRoughness.baseColorTexture.index"
+			
+			//printf ("'%s' -> '%s'\n", mat.GetName().C_Str (), texture.mFilename.C_Str ());
 			
 			ret.texture = zLoadAiTex (texture, scene);
 			//printf("outer %i\n", ret.texture.id);
@@ -316,6 +321,48 @@ Model loadMesh (const char * filePath)
 		Mesh mesh = zLoadAiMesh (data);
 		mesh.materialI = data.mMaterialIndex;
 		ret.meshes [i] = mesh;
+	}
+	
+	return ret;
+}
+
+Texture zLoadGlTex (cgltf_texture_view& tex)
+{
+	Texture ret;
+	
+	printf ("[*] %s\n", tex.texture->image->uri);
+	
+	return ret;
+}
+
+Material zLoadGlMat (cgltf_material& mat)
+{
+	Material ret;
+	
+	ret.shiny = mat.specular.specular_factor;
+	ret.reflection = mat.pbr_metallic_roughness.metallic_factor;
+	ret.roughness = mat.pbr_metallic_roughness.roughness_factor;
+	
+	ret.texture = zLoadGlTex (mat.pbr_metallic_roughness.base_color_texture);
+	
+	return ret;
+}
+
+Model loadMeshG (const char* filePath)
+{
+	Model ret;
+	
+	cgltf_options options{};
+	cgltf_data* data = 0;
+	cgltf_result err = cgltf_parse_file (&options, filePath, &data);
+	
+	if (err == cgltf_result_success)
+	{
+		for (int i = 0; i < data->materials_count; i++)
+		{
+			cgltf_material mat = data->materials [i];
+			zLoadGlMat (mat);
+		}
 	}
 	
 	return ret;
