@@ -18,9 +18,9 @@ int main (int argc, char** argv)
 	
 	Shader main = loadShaderSource ("shader/main.vs", "shader/main.fs");
 	
-	Model thing = loadMesh ("mesh/thing.glb");
+	Model // thing = loadMesh ("mesh/thing.glb");
 	
-	loadMeshG ("mesh/thing.glb");
+	thing = loadMeshGl ("mesh/thing.glb");
 	
 	int paused = 0;
 	int open = 1;
@@ -46,8 +46,7 @@ int main (int argc, char** argv)
 		main ["nearClip"] = 0.01;
 		main ["farClip"] = 1000.0;
 		
-		glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, thing.meshes[0].ebo);
-		glDrawElements (GL_TRIANGLES, thing.meshes[0].faces.size(), GL_UNSIGNED_SHORT, thing.meshes[0].faces.data());
+		zDrawMesh (thing.meshes [0]);
 		
 		gpuUpdate ();
 	}

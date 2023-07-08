@@ -8,6 +8,7 @@
 struct Shader 
 {
 	int id;
+	char compiled;
 	
 	struct Uniform
 	{
@@ -45,18 +46,18 @@ struct Shader
 	};
 	
 	std::unordered_map
-		<std::string, Uniform> uniforms;
+		<std::string, Uniform> zUniforms = {{}};
 
 	Uniform operator [] (char* name)
 	{
 		try
 		{
-			return uniforms.at (std::string (name));
+			return zUniforms.at (std::string (name));
 		}
 		catch (std::out_of_range _)
 		{
 			// the map will auto-add the new element
-			Uniform& u = uniforms [std::string (name)];
+			Uniform& u = zUniforms [std::string (name)];
 			u.loc = glGetUniformLocation (id, name);
 			if (u.loc == -1) fprintf (stderr, "[x] Uniform '%s' not found\n", name);
 			return u;
@@ -74,6 +75,8 @@ void shader (Shader s)
 // (raw, null-terminated char pointers)
 Shader zLoadShader (char* vertexCode, char* fragmentCode)
 {
+	Shader ret;
+	
 	int vertex;
 	{
 		char errorLog [1024] = {0};
@@ -82,7 +85,11 @@ Shader zLoadShader (char* vertexCode, char* fragmentCode)
 		glShaderSource (vertex, 1, &vertexCode, 0);
 		glCompileShader (vertex);
 		glGetShaderInfoLog (vertex, sizeof (errorLog), 0, errorLog);
-		if (errorLog [0]) fprintf (stderr, "%s\n", errorLog);
+		if (errorLog [0])
+		{
+			fprintf (stderr, "%s\n", errorLog);
+			ret.compiled = 0;
+		}
 	}
 	
 	int fragment;
@@ -93,23 +100,31 @@ Shader zLoadShader (char* vertexCode, char* fragmentCode)
 		glShaderSource (fragment, 1, &fragmentCode, 0);
 		glCompileShader (fragment);
 		glGetShaderInfoLog (fragment, sizeof (errorLog), 0, errorLog);
-		if (errorLog [0]) fprintf (stderr, "%s\n", errorLog);
+		if (errorLog [0])
+		{
+			fprintf (stderr, "%s\n", errorLog);
+			ret.compiled = 0;
+		}
 	}
 	
-	Shader s;
+	// link code into shader program
 	{
 		char errorLog [1024] = {0};
 		
-		s.id = glCreateProgram ();
-		glAttachShader (s.id, vertex);
-		glAttachShader (s.id, fragment);
-		glLinkProgram (s.id);
+		ret.id = glCreateProgram ();
+		glAttachShader (ret.id, vertex);
+		glAttachShader (ret.id, fragment);
+		glLinkProgram (ret.id);
 		
-		glGetProgramInfoLog (s.id, sizeof (errorLog), 0, errorLog);
-		if (errorLog [0]) fprintf (stderr, "%s\n", errorLog);
+		glGetProgramInfoLog (ret.id, sizeof (errorLog), 0, errorLog);
+		if (errorLog [0])
+		{
+			fprintf (stderr, "%s\n", errorLog);
+			ret.compiled = 0;
+		}
 	}
 	
-	return s;
+	return ret;
 }
 
 char* zFileToBuf (char* path)
@@ -146,10 +161,19 @@ Shader loadShaderSource (char* vertexPath, char* fragmentPath)
 
 	s = zLoadShader (vertex, fragment);
 	
+	if (s.compiled)
+	{
+		fprintf (stdout, "[•] Compiled '%s' and '%s'\n", vertexPath, fragmentPath);
+	}
+	else
+	{
+		fprintf (stderr, "[x] Shader compile error in '%s' and/or '%s'\n", vertexPath, fragmentPath);
+	}
+	
 	free (vertex);
 	free (fragment);
 
-	fprintf (stdout, "[•] Compiled '%s' and '%s'\n", vertexPath, fragmentPath);
+	
 
 	return s;
 }

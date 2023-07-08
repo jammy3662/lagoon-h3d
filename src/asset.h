@@ -47,51 +47,7 @@ Texture zUploadTex (int w, int h, char* texels)
 
 // pool of uploaded textures
 std::unordered_map
-	<std::string, Texture> zTextures;
-
-// load referenced/embedded textures from aiMaterial(s)
-Texture zLoadAiTex (aiTexture& tex, const aiScene* scene)
-{
-	// remember loaded textures by load path
-	// avoid duplicate textures
-	
-	const char* file = tex.mFilename.C_Str();
-	//printf ("[?] '%s'\n", file);
-	
-	// grab previously loaded texture
-	try
-	{
-		return zTextures.at (std::string (file));
-	}
-	
-	// otherwise, new texture from image data
-	catch (std::out_of_range _)
-	{
-		// map allocates a new texture
-		Texture& ret = zTextures [std::string (file)];
-		
-		const aiTexture* data = scene->GetEmbeddedTexture (file);
-		
-		if (data != 0)
-		{
-			printf ("loaded new texture '%s'\n", file);
-			//printf ("\t'%s'\n", data->mFilename.C_Str ());
-			// pull texel data from embedded texture
-			ret = zUploadTex (data->mWidth, data->mHeight, (char*)data->pcData);
-			//printf("inner %i\n", ret.id);
-		}
-		else
-		{
-			// texture is not embedded, search for a file on disk
-			// TODO:
-			
-			/*TEMP*/ret.id = (unsigned int) -1;
-			fprintf(stderr, "can't find texture '%s'\n", file);
-		}
-		
-		return ret;
-	}
-}
+	<std::string, Texture> zTextures = {{}};
 
 struct Material
 {
@@ -106,60 +62,7 @@ struct Material
 
 // loaded materials
 std::unordered_map
-	<std::string, Material> zMaterials;
-
-Material zLoadAiMat (aiMaterial& mat, const aiScene* scene)
-{
-	// retrieve stored material
-	try
-	{
-		return zMaterials.at (std::string (mat.GetName().C_Str ()));
-	}
-	
-	// populate new material with importer data
-	catch (std::out_of_range _)
-	{
-		printf("new! '%s'\n", mat.GetName().C_Str ());
-		
-		Material& ret = zMaterials [std::string (mat.GetName().C_Str ())];
-		
-		aiColor3D diffuse;
-		float opacity;
-		
-		mat.Get (AI_MATKEY_COLOR_DIFFUSE, diffuse);
-		mat.Get (AI_MATKEY_OPACITY, opacity);
-		
-		//ret.diffuse = vec4 {diffuse.r, diffuse.g, diffuse.b, opacity};
-		
-		mat.Get (AI_MATKEY_SHININESS, ret.shiny);
-		mat.Get (AI_MATKEY_REFLECTIVITY, ret.reflection);
-		
-		if (mat.GetTextureCount (aiTextureType_BASE_COLOR) > 0)
-		{
-			aiTexture texture;
-			mat.Get (AI_MATKEY_TEXTURE (aiTextureType_BASE_COLOR, 0), texture);
-			
-			//mat.Get ("$pbrMetallicRoughness.baseColorTexture.index"
-			
-			//printf ("'%s' -> '%s'\n", mat.GetName().C_Str (), texture.mFilename.C_Str ());
-			
-			ret.texture = zLoadAiTex (texture, scene);
-			//printf("outer %i\n", ret.texture.id);
-		}
-		
-		if (mat.GetTextureCount (aiTextureType_NORMALS) > 0)
-		{
-			aiTexture texture;
-			mat.Get (AI_MATKEY_TEXTURE (aiTextureType_NORMALS, 0), texture);
-			
-			printf ("'%s' -> '%s'\n", mat.GetName().C_Str (), texture.mFilename.C_Str ());
-			
-			ret.normals = zLoadAiTex (texture, scene);
-		}
-		
-		return ret;
-	}
-}
+	<std::string, Material> zMaterials = {{}};
 
 struct Mesh
 {
@@ -176,17 +79,24 @@ struct Mesh
 		struct {float x,y,z; } tangent;
 	};
 	
-	std::vector <Vertex> vertices;
-	
 	struct Face
 	{
 		unsigned short a, b, c;
 	};
 	
-	std::vector <Face> faces;
+	std::vector <Vertex> vertices = {{}};
+	std::vector <Face> faces = {{}};
 	
-	int materialI; // material index
+	int vertexCt = 0, faceCt = 0;
+	
+	int materialI = -1; // material index
 };
+
+void zDrawMesh (Mesh& mesh)
+{
+	glBindVertexArray (mesh.vao);
+	glDrawElements (GL_TRIANGLES, mesh.faceCt, GL_UNSIGNED_SHORT, 0);
+}
 
 Mesh zLoadAiMesh (aiMesh& mesh)
 {
@@ -203,14 +113,14 @@ Mesh zLoadAiMesh (aiMesh& mesh)
 		
 		auto& normal = ret.vertices [i].normal;
 		normal.x = mesh.mNormals [i].x;
-		normal.x = mesh.mNormals [i].y;
-		normal.x = mesh.mNormals [i].z;
+		normal.y = mesh.mNormals [i].y;
+		normal.z = mesh.mNormals [i].z;
 		
 		auto& color = ret.vertices [i].color;
-		color.r = (unsigned char) (255 * mesh.mColors [i]->r);
-		color.g = (unsigned char) (255 * mesh.mColors [i]->g);
-		color.b = (unsigned char) (255 * mesh.mColors [i]->b);
-		color.a = (unsigned char) (255 * mesh.mColors [i]->a);
+		color.r = (unsigned char) floor(255 * mesh.mColors [i]->r);
+		color.g = (unsigned char) floor(255 * mesh.mColors [i]->g);
+		color.b = (unsigned char) floor(255 * mesh.mColors [i]->b);
+		color.a = (unsigned char) floor(255 * mesh.mColors [i]->a);
 		
 		auto& uv0 = ret.vertices [i].uv0;
 		uv0.x = mesh.mTextureCoords [0][i].x;
@@ -278,10 +188,173 @@ Mesh zLoadAiMesh (aiMesh& mesh)
 
 struct Model
 {
-	std::vector <Material> materials;
-	std::vector <Mesh> meshes;
+	std::vector <Material> materials = {{}};
+	std::vector <Mesh> meshes = {{}};
 };
 
+Texture zLoadGlTex (cgltf_texture& tex)
+{
+	Texture ret;
+	
+	//printf ("[*] %s\n", tex.image->buffer_view->type);
+	
+	return ret;
+}
+
+Material zLoadGlMat (cgltf_material& mat)
+{
+	Material ret;
+	
+	ret.shiny = mat.specular.specular_factor;
+	ret.reflection = mat.pbr_metallic_roughness.metallic_factor;
+	ret.roughness = mat.pbr_metallic_roughness.roughness_factor;
+	
+	ret.texture = zLoadGlTex (*mat.pbr_metallic_roughness.base_color_texture.texture);
+	
+	return ret;
+}
+
+Mesh zLoadGlMesh (cgltf_mesh& mesh)
+{
+	
+}
+
+Model loadMeshGl (const char* filePath)
+{
+	Model ret;
+	
+	cgltf_options options {};
+	cgltf_data* data = 0;
+	
+	cgltf_result err = cgltf_parse_file (&options, filePath, &data);
+	
+	if (err == cgltf_result_success)
+	{
+		int bufErr = cgltf_load_buffers (&options, data, filePath);
+		
+		for (int i = 0; i < data->materials_count; i++)
+		{
+			zLoadGlMat (data->materials [i]);
+		}
+		for (int i = 0; i < data->textures_count; i++)
+		{
+			zLoadGlTex (data->textures[i]);
+		}
+	}
+	
+	else 
+	{
+		fprintf (stderr, "[x] GLB load failed\n");
+	}
+	
+	return ret;
+}
+
+// === //
+
+/*
+// load referenced/embedded textures from aiMaterial(s)
+Texture zLoadAiTex (aiTexture& tex, const aiScene* scene)
+{
+	// remember loaded textures by load path
+	// avoid duplicate textures
+	
+	const char* file = tex.mFilename.C_Str();
+	//printf ("[?] '%s'\n", file);
+	
+	// grab previously loaded texture
+	try
+	{
+		return zTextures.at (std::string (file));
+	}
+	
+	// otherwise, new texture from image data
+	catch (std::out_of_range _)
+	{
+		// map allocates a new texture
+		Texture& ret = zTextures [std::string (file)];
+		
+		const aiTexture* data = scene->GetEmbeddedTexture (file);
+		
+		if (data != 0)
+		{
+			printf ("loaded new texture '%s'\n", file);
+			//printf ("\t'%s'\n", data->mFilename.C_Str ());
+			// pull texel data from embedded texture
+			ret = zUploadTex (data->mWidth, data->mHeight, (char*)data->pcData);
+			//printf("inner %i\n", ret.id);
+		}
+		else
+		{
+			// texture is not embedded, search for a file on disk
+			// TODO:
+			
+			// (TEMP)
+			ret.id = (unsigned int) -1;
+			fprintf(stderr, "can't find texture '%s'\n", file);
+		}
+		
+		return ret;
+	}
+}
+*/
+
+/*
+Material zLoadAiMat (aiMaterial& mat, const aiScene* scene)
+{
+	// retrieve stored material
+	try
+	{
+		return zMaterials.at (std::string (mat.GetName().C_Str ()));
+	}
+	
+	// populate new material with importer data
+	catch (std::out_of_range _)
+	{
+		printf("new! '%s'\n", mat.GetName().C_Str ());
+		
+		Material& ret = zMaterials [std::string (mat.GetName().C_Str ())];
+		
+		aiColor3D diffuse;
+		float opacity;
+		
+		mat.Get (AI_MATKEY_COLOR_DIFFUSE, diffuse);
+		mat.Get (AI_MATKEY_OPACITY, opacity);
+		
+		//ret.diffuse = vec4 {diffuse.r, diffuse.g, diffuse.b, opacity};
+		
+		mat.Get (AI_MATKEY_SHININESS, ret.shiny);
+		mat.Get (AI_MATKEY_REFLECTIVITY, ret.reflection);
+		
+		if (mat.GetTextureCount (aiTextureType_BASE_COLOR) > 0)
+		{
+			aiTexture texture;
+			mat.Get (AI_MATKEY_TEXTURE (aiTextureType_BASE_COLOR, 0), texture);
+			
+			//mat.Get ("$pbrMetallicRoughness.baseColorTexture.index"
+			
+			//printf ("'%s' -> '%s'\n", mat.GetName().C_Str (), texture.mFilename.C_Str ());
+			
+			ret.texture = zLoadAiTex (texture, scene);
+			//printf("outer %i\n", ret.texture.id);
+		}
+		
+		if (mat.GetTextureCount (aiTextureType_NORMALS) > 0)
+		{
+			aiTexture texture;
+			mat.Get (AI_MATKEY_TEXTURE (aiTextureType_NORMALS, 0), texture);
+			
+			printf ("'%s' -> '%s'\n", mat.GetName().C_Str (), texture.mFilename.C_Str ());
+			
+			ret.normals = zLoadAiTex (texture, scene);
+		}
+		
+		return ret;
+	}
+}
+*/
+
+/*
 Model loadMesh (const char * filePath)
 {
 	Model ret;
@@ -325,45 +398,4 @@ Model loadMesh (const char * filePath)
 	
 	return ret;
 }
-
-Texture zLoadGlTex (cgltf_texture_view& tex)
-{
-	Texture ret;
-	
-	printf ("[*] %s\n", tex.texture->image->uri);
-	
-	return ret;
-}
-
-Material zLoadGlMat (cgltf_material& mat)
-{
-	Material ret;
-	
-	ret.shiny = mat.specular.specular_factor;
-	ret.reflection = mat.pbr_metallic_roughness.metallic_factor;
-	ret.roughness = mat.pbr_metallic_roughness.roughness_factor;
-	
-	ret.texture = zLoadGlTex (mat.pbr_metallic_roughness.base_color_texture);
-	
-	return ret;
-}
-
-Model loadMeshG (const char* filePath)
-{
-	Model ret;
-	
-	cgltf_options options{};
-	cgltf_data* data = 0;
-	cgltf_result err = cgltf_parse_file (&options, filePath, &data);
-	
-	if (err == cgltf_result_success)
-	{
-		for (int i = 0; i < data->materials_count; i++)
-		{
-			cgltf_material mat = data->materials [i];
-			zLoadGlMat (mat);
-		}
-	}
-	
-	return ret;
-}
+*/

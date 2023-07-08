@@ -114,4 +114,5 @@ void main()
 	color = calcReflection(color);
 	
 	finalColor = color;
+	finalColor = vec4 (1, 1, 1, 1);
 }
