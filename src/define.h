@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cstdlib>
+#include <arpa/inet.h>
 
 #include "../include/ext.h"
 
@@ -22,4 +23,3 @@ vec2 waverage(vec2 from, vec2 to, float weight) {
 		waverage(from.y, to.y, weight)
 	};
 }
-

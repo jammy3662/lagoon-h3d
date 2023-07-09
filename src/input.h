@@ -167,7 +167,10 @@ Mapping gamepadAndJoystick =
 	{.device = JOYSTICK, .code = AXIS_RIGHT},
 }};
 
-struct
+// only way to access scroll input is through a callback
+void zInputScrollCallback (GLFWwindow* window, double x, double y);
+
+struct input
 {
 	GLFWwindow* window;
 	
@@ -184,6 +187,170 @@ struct
 	
 	std::array <bool, INPUT_ACTION_CT> pressedActions;
 	std::array <bool, INPUT_ACTION_CT> heldActions;
+	
+	void init ()
+	{
+		window = gpu.window;
+		
+		// TODO: load saved controls from file
+		
+		glfwSetScrollCallback (window, zInputScrollCallback);
+		
+		if (glfwRawMouseMotionSupported ())
+		{
+			glfwSetInputMode (window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+		}
+		
+		glfwSetInputMode (window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		glfwSetInputMode (window, GLFW_STICKY_KEYS, GLFW_TRUE);
+	}
+	
+	void update ()
+	{
+		glfwPollEvents ();
+		
+		glfwGetGamepadState (gamepadIdx, &gamepad);
+		
+		// retrieve cursor data
+		{
+			static double x, y;
+			glfwGetCursorPos (window, &x, &y);
+			
+			mouseX = x - lastMouseX;
+			lastMouseX = x;
+			
+			mouseY = y - lastMouseY;
+			lastMouseY = y;
+		}
+		
+		// store state from last frame
+		heldActions = pressedActions;
+		// clean state to read next inputs
+		pressedActions.fill (false);
+		
+		int idx = 0;
+		
+		// update each binding as per configuration
+		for (zInputScalar& binding : mapping)
+		{
+			binding.strength = 0.0;
+			
+			switch (binding.device)
+			{
+				int button;
+				case KEYBOARD:
+					button = glfwGetKey (window, binding.code);
+					if (button == GLFW_PRESS) binding.strength = 1.0;
+				break;
+				
+				case GAMEPAD:
+					if (binding.code == ZL_BUT)
+						binding.strength = gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
+					else if (binding.code == ZR_BUT)
+						binding.strength = gamepad.axes [GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
+					else if (gamepad.buttons [binding.code])
+						binding.strength = 1.0;
+				break;
+				
+				case CLICK:
+					button = glfwGetMouseButton (window, binding.code);
+					if (button == GLFW_PRESS) binding.strength = 1.0;
+				break;
+				
+				case MOUSE_MOVE:
+					if (binding.code == AXIS_UP)
+						binding.strength = abs (MIN (mouseY, 0));
+					else if (binding.code == AXIS_DOWN)
+						binding.strength = MAX (0, mouseY);
+					else if (binding.code == AXIS_LEFT)
+						binding.strength = abs (MIN (mouseX, 0));
+					else if (binding.code == AXIS_RIGHT)
+						binding.strength = MAX (mouseX, 0);
+				break;
+				
+				case MOUSE_SCROLL:
+					if (binding.code == AXIS_UP)
+						binding.strength = abs (MIN (glfwScrollY, 0));
+					else if (binding.code == AXIS_DOWN)
+						binding.strength = MAX (0, glfwScrollY);
+					else if (binding.code == AXIS_LEFT)
+						binding.strength = abs (MIN (glfwScrollX, 0));
+					else if (binding.code == AXIS_RIGHT)
+						binding.strength = MAX (glfwScrollX, 0);
+				break;
+				
+				case JOYSTICK:
+					if (binding.code == AXIS_UP)
+						binding.strength = abs (MIN (mouseY, 0));
+					else if (binding.code == AXIS_DOWN)
+						binding.strength = MAX (0, mouseY);
+					else if (binding.code == AXIS_LEFT)
+						binding.strength = abs (MIN (mouseX, 0));
+					else if (binding.code == AXIS_RIGHT)
+						binding.strength = MAX (mouseX, 0);
+					
+					if (binding.code == AXIS_NORTH)
+						binding.strength = abs (MIN (gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_Y], 0));
+					else if (binding.code == AXIS_SOUTH)
+						binding.strength = MAX (0, gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_Y]);
+					else if (binding.code == AXIS_WEST)
+						binding.strength = abs (MIN (gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_X], 0));
+					else if (binding.code == AXIS_EAST)
+						binding.strength = MAX (gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_X], 0);
+				break;
+			}
+			
+			pressedActions [idx] = (binding.strength != 0.0);
+			
+			#ifdef DEBUG_INPUT
+			
+			if (buttonNow ((InputAction) idx))
+				printf ("◌ %s\n", inputNames [idx]);
+			
+			#endif
+			
+			idx++;
+		}
+	}
+	
+	// release cursor
+	void release ()
+	{
+		glfwSetInputMode (window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	}
+	
+	// capture cursor
+	void capture ()
+	{
+		glfwSetInputMode (window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	}
+	
+	inline
+	bool button (InputAction button)
+	{
+		return (pressedActions [button]);
+	}
+	
+	inline
+	bool buttonNow (InputAction button)
+	{
+		return (pressedActions [button] &&	!heldActions [button]);
+	}
+	
+	inline
+	void axisL (float* _x, float* _y)
+	{
+		*_x = mapping [NAV_RIGHT].strength - mapping[NAV_LEFT].strength;
+		*_y = mapping [NAV_UP].strength - mapping [NAV_DOWN].strength;
+	}
+	
+	inline
+	void axisR (float* _x, float* _y)
+	{
+		*_x = mapping [POINT_RIGHT].strength - mapping[POINT_LEFT].strength;
+		*_y = mapping [POINT_UP].strength - mapping [POINT_DOWN].strength;
+	}
+	
 }
 input;
 
@@ -193,167 +360,3 @@ void zInputScrollCallback (GLFWwindow* window, double x, double y)
 	input.glfwScrollX = x;
 	input.glfwScrollY = y;
 }
-
-void releaseCursor ()
-{
-	glfwSetInputMode (input.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-}
-
-void captureCursor ()
-{
-	glfwSetInputMode (input.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-}
-
-bool getButton (InputAction button)
-{
-	return (input.pressedActions [button]);
-}
-
-bool getButtonNow (InputAction button)
-{
-	return (input.pressedActions [button] && ! input.heldActions [button]);
-}
-
-vec2 getAxis1 ()
-{
-	return vec2
-	{
-		input.mapping [NAV_RIGHT].strength - input.mapping [NAV_LEFT].strength,
-		input.mapping [NAV_UP].strength - input.mapping [NAV_DOWN].strength
-	};
-}
-
-vec2 getAxis2 ()
-{
-	return vec2
-	{
-		input.mapping [POINT_RIGHT].strength - input.mapping [POINT_LEFT].strength,
-		input.mapping [POINT_UP].strength - input.mapping [POINT_DOWN].strength
-	};
-}
-
-void inputInit ()
-{
-	input.window = gpu.window;
-	
-	// TODO: load saved controls from file
-	
-	glfwSetScrollCallback (input.window, zInputScrollCallback);
-	
-	if (glfwRawMouseMotionSupported ())
-	{
-		glfwSetInputMode (input.window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-	}
-	
-	glfwSetInputMode (input.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	glfwSetInputMode (input.window, GLFW_STICKY_KEYS, GLFW_TRUE);
-}
-
-void inputUpdate ()
-{
-	glfwPollEvents ();
-	
-	glfwGetGamepadState (input.gamepadIdx, & input.gamepad);
-	
-	// retrieve cursor data
-	{
-		static double x, y;
-		glfwGetCursorPos (input.window, &x, &y);
-		
-		input.mouseX = x - input.lastMouseX;
-		input.lastMouseX = x;
-		
-		input.mouseY = y - input.lastMouseY;
-		input.lastMouseY = y;
-	}
-	
-	// store state from last frame
-	input.heldActions = input.pressedActions;
-	// clean state to read next inputs
-	input.pressedActions.fill (false);
-	
-	int idx = 0;
-	
-	// update each binding as per configuration
-	for (zInputScalar& binding : input.mapping)
-	{
-		binding.strength = 0.0;
-		
-		switch (binding.device)
-		{
-			int button;
-			case KEYBOARD:
-				button = glfwGetKey (input.window, binding.code);
-				if (button == GLFW_PRESS) binding.strength = 1.0;
-			break;
-			
-			case GAMEPAD:
-				if (binding.code == ZL_BUT)
-					binding.strength = input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
-				else if (binding.code == ZR_BUT)
-					binding.strength = input.gamepad.axes [GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
-				else if (input.gamepad.buttons [binding.code])
-					binding.strength = 1.0;
-			break;
-			
-			case CLICK:
-				button = glfwGetMouseButton (input.window, binding.code);
-				if (button == GLFW_PRESS) binding.strength = 1.0;
-			break;
-			
-			case MOUSE_MOVE:
-				if (binding.code == AXIS_UP)
-					binding.strength = abs (MIN (input.mouseY, 0));
-				else if (binding.code == AXIS_DOWN)
-					binding.strength = MAX (0, input.mouseY);
-				else if (binding.code == AXIS_LEFT)
-					binding.strength = abs (MIN (input.mouseX, 0));
-				else if (binding.code == AXIS_RIGHT)
-					binding.strength = MAX (input.mouseX, 0);
-			break;
-			
-			case MOUSE_SCROLL:
-				if (binding.code == AXIS_UP)
-					binding.strength = abs (MIN (input.glfwScrollY, 0));
-				else if (binding.code == AXIS_DOWN)
-					binding.strength = MAX (0, input.glfwScrollY);
-				else if (binding.code == AXIS_LEFT)
-					binding.strength = abs (MIN (input.glfwScrollX, 0));
-				else if (binding.code == AXIS_RIGHT)
-					binding.strength = MAX (input.glfwScrollX, 0);
-			break;
-			
-			case JOYSTICK:
-				if (binding.code == AXIS_UP)
-					binding.strength = abs (MIN (input.mouseY, 0));
-				else if (binding.code == AXIS_DOWN)
-					binding.strength = MAX (0, input.mouseY);
-				else if (binding.code == AXIS_LEFT)
-					binding.strength = abs (MIN (input.mouseX, 0));
-				else if (binding.code == AXIS_RIGHT)
-					binding.strength = MAX (input.mouseX, 0);
-				
-				if (binding.code == AXIS_NORTH)
-					binding.strength = abs (MIN (input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_Y], 0));
-				else if (binding.code == AXIS_SOUTH)
-					binding.strength = MAX (0, input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_Y]);
-				else if (binding.code == AXIS_WEST)
-					binding.strength = abs (MIN (input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_X], 0));
-				else if (binding.code == AXIS_EAST)
-					binding.strength = MAX (input.gamepad.axes [GLFW_GAMEPAD_AXIS_LEFT_X], 0);
-			break;
-		}
-		
-		input.pressedActions [idx] = (binding.strength != 0.0);
-		
-		#ifdef DEBUG_INPUT
-		
-		if (getButtonNow ((InputAction) idx))
-			printf ("◌ %s\n", inputNames [idx]);
-		
-		#endif
-		
-		idx++;
-	}
-}
-

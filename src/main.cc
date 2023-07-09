@@ -12,46 +12,42 @@
 
 int main (int argc, char** argv)
 {
-	gpuInit ();
+	gpu.init ();
 	
-	inputInit ();
+	input.init ();
 	
-	Shader main = loadShaderSource ("shader/main.vs", "shader/main.fs");
+	Shader main = shader.loadFile ("shader/main.vs", "shader/main.fs");
 	
-	Model // thing = loadMesh ("mesh/thing.glb");
-	
-	thing = loadMeshGl ("mesh/thing.glb");
+	Model thing = loadMeshGl ("mesh/thing.glb");
 	
 	int paused = 0;
 	int open = 1;
 	
 	while (gpu.open)
 	{
-		inputUpdate ();
+		input.update ();
 		
-		if (getButtonNow (InputAction::MENU))
+		if (input.buttonNow (InputAction::MENU))
 		{
 			paused = !paused;
 			
-			if (paused)
-				releaseCursor ();
-			else
-				captureCursor ();
+			if (paused) input.release ();
+			else input.capture ();
 		}
 		
-		shader (main);
+		shader.use (main);
 		
-		main ["ambient"] = 0.15;
+		shader ["ambient"] = 0.15;
 		
-		main ["nearClip"] = 0.01;
-		main ["farClip"] = 1000.0;
+		shader ["nearClip"] = 0.01;
+		shader ["farClip"] = 1000.0;
 		
 		zDrawMesh (thing.meshes [0]);
 		
-		gpuUpdate ();
+		gpu.update ();
 	}
 	
-	gpuClose ();
+	gpu.close ();
 	
 	return 0;
 }
