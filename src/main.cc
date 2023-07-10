@@ -16,6 +16,8 @@ int main (int argc, char** argv)
 	
 	input.init ();
 	
+	Texture whale = asset.loadTexture ("whale.jpg");
+	
 	Shader main = shader.loadFile ("shader/main.vs", "shader/main.fs");
 	
 	Model thing = loadMeshGl ("mesh/thing.glb");

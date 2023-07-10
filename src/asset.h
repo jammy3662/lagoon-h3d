@@ -2,6 +2,9 @@
 
 #include "define.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -23,7 +26,7 @@ struct Texture
 	}
 };
 
-Texture zUploadTex (int w, int h, char* texels)
+Texture zUploadTex (int w, int h, int channels, char* texels)
 {
 	Texture ret;
 
@@ -38,8 +41,11 @@ Texture zUploadTex (int w, int h, char* texels)
 	// linear for expanding, interpolate mipmap level
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
+	// 0 element for padding (1 channel = GL_R)
+	int fmt [] = {0, GL_R, GL_RG, GL_RGB, GL_RGBA};
+	
 	glTexImage2D (GL_TEXTURE_2D, 2, GL_RGBA, w, h,
-	/*border*/0, GL_BGRA, GL_UNSIGNED_BYTE, texels);
+	/*border*/0, fmt [channels], GL_UNSIGNED_BYTE, texels);
 	glGenerateMipmap (GL_TEXTURE_2D);
 
 	return ret;
@@ -245,6 +251,30 @@ Model loadMeshGl (const char* filePath)
 
 	return ret;
 }
+
+struct asset
+{
+	Texture loadTexture (char* path)
+	{
+		Texture ret;
+		
+		int w, h, channels;
+		char* texels = (char*) stbi_load (path, &w, &h, &channels, 0);
+		
+		if (texels)
+		{
+			ret = zUploadTex (w, h, channels, texels);
+		}
+		else
+		{
+			fprintf (stderr, "[x] Texture '%s' not found\n", path);
+		}
+		
+		return ret;
+	}
+	
+}
+asset;
 
 // === //
 
