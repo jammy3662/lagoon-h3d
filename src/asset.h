@@ -5,25 +5,36 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
+#include "../include/libgltf.h"
 
-#define CGLTF_IMPLEMENTATION
-#include "../include/cgltf.h"
+#include <fstream>
 
 #include <unordered_map>
 #include <vector>
 #include <string_view>
 
+// return a file pointer as istream
+std::shared_ptr <std::istream> libgltfLoadFile (const std::string& path)
+{
+	std::ifstream file (path);
+	
+	std::shared_ptr <std::istream> stream = std::shared_ptr <std::istream> (&file);
+	
+	return stream;
+};
+
+void load ()
+{
+	using namespace libgltf;
+	
+	std::shared_ptr <IglTFLoader> loader;
+	
+	loader = IglTFLoader::Create (libgltfLoadFile);
+}
+
 struct Texture
 {
-	unsigned int id;
-
-	Texture ()
-	{
-		id = 0;
-	}
+	unsigned int id = 0;
 };
 
 Texture zUploadTex (int w, int h, int channels, char* texels)
@@ -198,60 +209,6 @@ struct Model
 	std::vector <Mesh> meshes = {{}};
 };
 
-Texture zLoadGlTex (cgltf_texture& tex)
-{
-	Texture ret;
-
-	return ret;
-}
-
-Material zLoadGlMat (cgltf_material& mat)
-{
-	Material ret;
-
-	ret.shiny = mat.specular.specular_factor;
-	ret.reflection = mat.pbr_metallic_roughness.metallic_factor;
-	ret.roughness = mat.pbr_metallic_roughness.roughness_factor;
-
-	ret.texture = zLoadGlTex (*mat.pbr_metallic_roughness.base_color_texture.texture);
-
-	return ret;
-}
-
-Mesh zLoadGlMesh (cgltf_mesh& mesh)
-{
-
-}
-
-Model loadMeshGl (const char* filePath)
-{
-	Model ret;
-
-	cgltf_options options {};
-	cgltf_data* data = 0;
-
-	cgltf_result err = cgltf_parse_file (&options, filePath, &data);
-
-	if (err == cgltf_result_success)
-	{
-		int bufErr = cgltf_load_buffers (&options, data, filePath);
-
-		printf ("%zu\n", strlen ((char*)data->buffers[0].data));
-
-		for (int i = 0; i < data->materials_count; i++)
-		{
-			zLoadGlMat (data->materials [i]);
-		}
-	}
-
-	else
-	{
-		fprintf (stderr, "[x] GLB load failed\n");
-	}
-
-	return ret;
-}
-
 struct asset
 {
 	Texture loadTexture (char* path)
@@ -273,6 +230,11 @@ struct asset
 		return ret;
 	}
 	
+	// load GEM (generic embedded mesh) model file
+	Model loadGem (char* path)
+	{
+		
+	}
 }
 asset;
 

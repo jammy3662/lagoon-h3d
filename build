@@ -14,10 +14,9 @@ clang++ main.cc -o ../lagoon \
 	-g3 \
 	-Wno-c++11-narrowing -Wno-write-strings -Wno-reserved-user-defined-literal \
 \
-	-Iinclude \
+	-I include \
 	-Llib \
-	-lGL -lglad -lglfw \
-	-lassimp \
+	-lGL -lglabd -lglfw -llibglfw \
 $@ #2>&1 >/dev/null | grep -E 'error'
 
 # capture clang error code

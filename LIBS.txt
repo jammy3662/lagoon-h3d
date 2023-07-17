@@ -1,13 +1,19 @@
 (this is not a finished or final list)
 
-- GLAD
+The necessary libraries should be installed locally as needed to compile and play.
+Failing a system-level installation, the `.a` files should be copied or linked to in a folder called `lib`, which should be in the same directory as 'src'.
+
+- GLAD (libglad)
 driver level opengl interface
 
-- GLFW
+- GLFW (libglfw)
 low level management of render state and hardware
 
-- Assimp
-load models and attached texture data
+* STB Image [included with build]
+handle image data of various formats
 
-- Enet
+- GLTF (libgltf)
+load models and attached materials and textures
+
+- Enet (libenet)
 udp-based networking
