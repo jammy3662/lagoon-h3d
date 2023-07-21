@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-//#define DEBUG_INPUT
+#define DEBUG_INPUT
 
 #include "define.h"
 #include "engine/input.h"
@@ -11,28 +11,25 @@
 
 int main (int argc, char** argv)
 {
-	init();
-	
-	input.init ();
+	init ();
+	initInput ();
 	
 	Texture whale = loadTexture ("whale.jpg");
-	
 	Shader main = loadShader ("shader/main.vs", "shader/main.fs");
-	
 	//Model thing = loadMeshGl ("mesh/thing.glb");
 	
 	int paused = 0;
 	
 	while (winOpen)
 	{
-		input.update ();
+		refreshInput ();
 		
-		if (input.buttonNow (InputAction::MENU))
+		if (buttonPressedNow (InputAction::MENU))
 		{
 			paused = !paused;
 			
-			if (paused) input.release ();
-			else input.capture ();
+			if (paused) releaseCursor ();
+			else captureCursor ();
 		}
 		
 		useShader (main);
