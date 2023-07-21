@@ -1,8 +1,6 @@
 #pragma once
 
-#include "define.h"
-
-#include "../include/glad.h"
+#include <glad.h>
 #include <GLFW/glfw3.h>
 
 // hardware render context
@@ -88,6 +86,7 @@ char* zFileToBuf (char* path)
 	return buffer;
 }
 
+/*
 // buffer must be at least 3 bytes larger than output
 unsigned long b64 (unsigned char* dst, unsigned char* src, long ln)
 {
@@ -115,3 +114,4 @@ unsigned long b64 (unsigned char* dst, unsigned char* src, long ln)
 r:
 	return ((o*3) >> 2);
 }
+*/

@@ -1,7 +1,6 @@
 #pragma once
 
-#include "define.h"
-#include "backend.h"
+#include "gpu.h"
 
 #include <array>
 

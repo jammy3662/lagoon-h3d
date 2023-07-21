@@ -1,28 +1,29 @@
 #!/bin/bash
 
-cd src
+CLANG_FLAGS=" \
+-fcolor-diagnostics \
+-g3 \
+-Wno-c++11-narrowing -Wno-write-strings -Wno-reserved-user-defined-literal \
+\
+-isystem src -isystem include \
+"
 
-VERSION=$(date +%-y.%-V.%-u)
-PLATFORM=$(uname -m)
+mkdir -p bin
 
-clang++ main.cc -o ../lagoon \
-\
-	-DVERSION=\"$VERSION\" \
-	-DPLATFORM=\"$PLATFORM\" \
-\
-	-fcolor-diagnostics \
-	-g3 \
-	-Wno-c++11-narrowing -Wno-write-strings -Wno-reserved-user-defined-literal \
-\
-	-I include \
-	-Llib \
-	-lGL -lglabd -lglfw -llibglfw \
-$@ #2>&1 >/dev/null | grep -E 'error'
+for i in $(find src -iname '*.cc')
+do
+	echo "$i --> bin/$(basename -s '.cc' "$i").o"
+	clang++ -c "$i" -o "bin/$(basename -s '.cc' "$i").o" \
+		$CLANG_FLAGS
+done
+
+clang++ bin/* -o lagoon $CLANG_FLAGS \
+-Llib -lGL -lglad -lglfw \
+$@ \
+#2>&1 >/dev/null | grep -E 'error'
 
 # capture clang error code
 SUCCESS=$?
-
-cd ..
 
 # it always comes back
 rm -rf .vscode

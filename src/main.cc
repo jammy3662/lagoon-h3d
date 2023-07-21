@@ -1,14 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "define.h"
+#include <stdint.h>
 
 //#define DEBUG_INPUT
 
-#include "backend.h"
-#include "input.h"
-#include "shader.h"
-#include "asset.h"
+#include "define.h"
+#include "engine/input.h"
+#include "engine/shader.h"
+#include "engine/texture.h"
 
 int main (int argc, char** argv)
 {
@@ -16,11 +15,11 @@ int main (int argc, char** argv)
 	
 	input.init ();
 	
-	Texture whale = asset.loadTexture ("whale.jpg");
+	Texture whale = loadTexture ("whale.jpg");
 	
-	Shader main = shader.loadFile ("shader/main.vs", "shader/main.fs");
+	Shader main = loadShader ("shader/main.vs", "shader/main.fs");
 	
-	Model thing = loadMeshGl ("mesh/thing.glb");
+	//Model thing = loadMeshGl ("mesh/thing.glb");
 	
 	int paused = 0;
 	int open = 1;
@@ -37,14 +36,12 @@ int main (int argc, char** argv)
 			else input.capture ();
 		}
 		
-		shader.use (main);
+		useShader (main);
 		
-		shader ["ambient"] = 0.15;
+		setUniform ("ambient", 0.15);
 		
-		shader ["nearClip"] = 0.01;
-		shader ["farClip"] = 1000.0;
-		
-		zDrawMesh (thing.meshes [0]);
+		setUniform ("nearClip", 0.01);
+		setUniform ("farClip", 1000.0);
 		
 		gpu.update ();
 	}

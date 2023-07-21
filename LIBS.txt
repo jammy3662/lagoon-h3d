@@ -3,17 +3,20 @@
 The necessary libraries should be installed locally as needed to compile and play.
 Failing a system-level installation, the `.a` files should be copied or linked to in a folder called `lib`, which should be in the same directory as 'src'.
 
-- GLAD (libglad)
+- GLAD
 driver level opengl interface
 
-- GLFW (libglfw)
+- GLFW
 low level management of render state and hardware
+
+- libarchive
+read game resources from packed .tar
 
 * STB Image [included with build]
 handle image data of various formats
 
-- GLTF (libgltf)
+- GLTF
 load models and attached materials and textures
 
-- Enet (libenet)
+- Enet
 udp-based networking
