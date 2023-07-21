@@ -1,9 +1,19 @@
 #include "input.h"
 
+#include <stdio.h>
 #include <math.h>
 
 #define MIN(A, B) ((A < B) ? A : B)
 #define MAX(A, B) ((A > B) ? A : B)
+
+const char* inputNames [] =
+{
+	"accept", "cancel", "info", "special",
+	"menu", "pick", "alt", "shift",
+	"more", "less", "prev", "next",
+	"nav up", "nav down", "nav left", "nav right",
+	"point up", "point down", "point left", "point right",
+};
 
 const Mapping mouseAndKeyboard =
 {{
@@ -62,6 +72,8 @@ const Mapping gamepadAndJoystick =
 	{.device = JOYSTICK, .code = AXIS_LEFT},
 	{.device = JOYSTICK, .code = AXIS_RIGHT},
 }};
+
+char debugInput = 0;
 
 int gamepadIdx;
 GLFWgamepadstate gamepad;
@@ -196,12 +208,8 @@ void refreshInput ()
 		
 		pressedActions [idx] = (binding.strength != 0.0);
 		
-		#ifdef DEBUG_INPUT
-		
-		if (buttonNow ((InputAction) idx))
+		if (debugInput && buttonPressedNow ((InputAction) idx))
 			printf ("◌ %s\n", inputNames [idx]);
-		
-		#endif
 		
 		idx++;
 	}

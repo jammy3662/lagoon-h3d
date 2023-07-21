@@ -76,17 +76,6 @@ enum InputAction
 	INPUT_ACTION_CT
 };
 
-#ifdef DEBUG_INPUT
-const char* inputNames [] =
-{
-	"accept", "cancel", "info", "special",
-	"menu", "pick", "alt", "shift",
-	"more", "less", "prev", "next",
-	"nav up", "nav down", "nav left", "nav right",
-	"point up", "point down", "point left", "point right",
-};
-#endif
-
 struct Binding
 {
 	int device;
@@ -99,6 +88,8 @@ typedef std::array <Binding, INPUT_ACTION_CT> Mapping;
 extern const Mapping mouseAndKeyboard, gamepadAndJoystick;
 
 extern Mapping mapping;
+
+extern char debugInput;
 
 typedef struct { float x, y; } float2;
 typedef struct { float x, y, z; } float3;

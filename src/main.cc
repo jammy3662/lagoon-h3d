@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#define DEBUG_INPUT
-
 #include "define.h"
 #include "engine/input.h"
 #include "engine/shader.h"
@@ -19,6 +17,8 @@ int main (int argc, char** argv)
 	//Model thing = loadMeshGl ("mesh/thing.glb");
 	
 	int paused = 0;
+	
+	debugInput = 1;
 	
 	while (winOpen)
 	{
