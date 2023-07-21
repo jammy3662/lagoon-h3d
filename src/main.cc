@@ -11,7 +11,7 @@
 
 int main (int argc, char** argv)
 {
-	gpu.init ();
+	init();
 	
 	input.init ();
 	
@@ -22,9 +22,8 @@ int main (int argc, char** argv)
 	//Model thing = loadMeshGl ("mesh/thing.glb");
 	
 	int paused = 0;
-	int open = 1;
 	
-	while (gpu.open)
+	while (winOpen)
 	{
 		input.update ();
 		
@@ -43,10 +42,10 @@ int main (int argc, char** argv)
 		setUniform ("nearClip", 0.01);
 		setUniform ("farClip", 1000.0);
 		
-		gpu.update ();
+		refresh ();
 	}
 	
-	gpu.close ();
+	close ();
 	
 	return 0;
 }

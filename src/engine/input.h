@@ -171,7 +171,7 @@ void zInputScrollCallback (GLFWwindow* window, double x, double y);
 
 struct input
 {
-	GLFWwindow* window;
+	//GLFWwindow* window;
 	
 	int gamepadIdx;
 	GLFWgamepadstate gamepad;
@@ -189,7 +189,7 @@ struct input
 	
 	void init ()
 	{
-		window = gpu.window;
+		//this->window = window;
 		
 		// TODO: load saved controls from file
 		

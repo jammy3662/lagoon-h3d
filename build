@@ -8,6 +8,8 @@ CLANG_FLAGS=" \
 -isystem src -isystem include \
 "
 
+echo "..."
+
 mkdir -p bin
 
 for i in $(find src -iname '*.cc')
@@ -24,6 +26,8 @@ $@ \
 
 # capture clang error code
 SUCCESS=$?
+
+echo "..."
 
 # it always comes back
 rm -rf .vscode
