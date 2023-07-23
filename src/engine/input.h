@@ -43,16 +43,12 @@ enum GamepadCode
 
 enum AnalogCode
 {
-	AXIS_UP,
-	AXIS_DOWN,
-	AXIS_LEFT,
-	AXIS_RIGHT,
+	AXIS_UP, AXIS_DOWN,
+	AXIS_LEFT, AXIS_RIGHT,
 	
 	// left joystick only
-	AXIS_NORTH,
-	AXIS_SOUTH,
-	AXIS_WEST,
-	AXIS_EAST,
+	AXIS_NORTH, AXIS_SOUTH,
+	AXIS_WEST, AXIS_EAST,
 };
 
 enum InputAction
@@ -89,11 +85,8 @@ extern const Mapping mouseAndKeyboard, gamepadAndJoystick;
 
 extern Mapping mapping;
 
+// enables console output when set
 extern char debugInput;
-
-typedef struct { float x, y; } float2;
-typedef struct { float x, y, z; } float3;
-typedef struct { float x, y, z, w; } float4;
 
 void initInput ();
 void refreshInput ();

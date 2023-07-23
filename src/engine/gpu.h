@@ -1,5 +1,7 @@
 #pragma once
 
+#include "define.h"
+
 // need to include glad before GLFW
 // but keep glad in the implementation
 // to avoid clutter

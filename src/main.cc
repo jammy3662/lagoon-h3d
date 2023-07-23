@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "define.h"
 #include "engine/input.h"
 #include "engine/shader.h"
 #include "engine/texture.h"
@@ -18,7 +17,7 @@ int main (int argc, char** argv)
 	
 	int paused = 0;
 	
-	debugInput = 1;
+	//debugInput = 1;
 	
 	while (winOpen)
 	{

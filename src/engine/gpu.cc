@@ -11,9 +11,6 @@ char winOpen = 1;
 // viewport (window) dimensions
 int viewX = 1280, viewY = 720;
 
-// frame output resolution
-int frameX = 1920, frameY = 1080;
-
 void init (const char* title)
 {
 	if (!glfwInit())
@@ -28,7 +25,7 @@ void init (const char* title)
 	glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 2);
 	glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	window = glfwCreateWindow (frameX, frameY, title, NULL, NULL);
+	window = glfwCreateWindow (viewX, viewY, title, NULL, NULL);
 
 	if (!window)
 	{
