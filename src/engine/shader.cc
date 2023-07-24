@@ -26,6 +26,18 @@ char* fileToBuffer (const char* path)
 	return buffer;
 }
 
+// uniform type
+enum UT
+{
+	i,
+	f,
+	d,
+	xy,
+	xyz,
+	xyzw,
+	t,
+};
+
 // curent shader
 Shader shader;
 int textureUnit = 0;
@@ -116,65 +128,120 @@ Shader loadShader (const char* vsPath, const char* fsPath)
 	return ret;
 }
 
-void useShader (Shader s)
+void bindShader (Shader s)
 {
 	shader = s;
 	glUseProgram (s.id);
-}
-
-uint uniformLocation (const char* name)
-{
-	try
-	{
-		return shader.uniforms.at (std::string (name));
-	}
 	
-	catch (std::out_of_range err)
-	{
-		// first access to this uniform
-		// add to uniform list
-		
-		uint ret =
-		shader.uniforms [std::string (name)] = glGetUniformLocation (shader.id, name);
-		
-		if (ret == -1) fprintf (stderr, "[x] Uniform '%s' not found\n", name);
-		return ret;
-	}
+	// TODO: bind shader uniforms as stored in shader struct
 }
 
-void setUniform (const char* name, int i)
+void attach (Shader shader, const char* name, int i)
 {
-	glUniform1i (uniformLocation (name), i);
+	Uniform u;
+	u.location = glGetUniformLocation (shader.id, name);
+	u.type = UT::i;
+	u.value = 0x0;
+	u.constant.i = i;
 }
 
-void setUniform (const char* name, float f)
+void attach (Shader shader, const char* name, float f)
 {
-	glUniform1f (uniformLocation (name), f);
+	Uniform u;
+	u.location = glGetUniformLocation (shader.id, name);
+	u.type = UT::f;
+	u.value = 0x0;
+	u.constant.f = f;
 }
 
-void setUniform (const char* name, double d)
+void attach (Shader shader, const char* name, double d)
 {
-	glUniform1f (uniformLocation (name), (float) d);
+	Uniform u;
+	u.location = glGetUniformLocation (shader.id, name);
+	u.type = UT::d;
+	u.value = 0x0;
+	u.constant.d = d;
 }
 
-void setUniform (const char* name, float x, float y)
+void attach (Shader shader, const char* name, float2 xy)
 {
-	glUniform2f (uniformLocation (name), x, y);
+	Uniform u;
+	u.location = glGetUniformLocation (shader.id, name);
+	u.type = UT::xy;
+	u.value = 0x0;
+	u.constant.xy = xy;
 }
 
-void setUniform (const char* name, float x, float y, float z)
+void attach (Shader shader, const char* name, float3 xyz)
 {
-	glUniform3f (uniformLocation (name), x, y, z);
+	Uniform u;
+	u.location = glGetUniformLocation (shader.id, name);
+	u.type = UT::xyz;
+	u.value = 0x0;
+	u.constant.xyz = xyz;
 }
 
-void setUniform (const char* name, float x, float y, float z, float w)
+void attach (Shader shader, const char* name, float4 xyzw)
 {
-	glUniform4f (uniformLocation (name), x, y, z, w);
+	Uniform u;
+	u.location = glGetUniformLocation (shader.id, name);
+	u.type = UT::xyzw;
+	u.value = 0x0;
+	u.constant.xyzw = xyzw;
 }
 
-// TODO:	(incomplete)
-void setUniform (const char* name, Texture t)
+void attach (Shader shader, const char* name, int* i)
 {
-	glBindTexture (GL_TEXTURE_2D, t.id);
-	glUniform1i (uniformLocation (name), t.id);
+	Uniform u;
+	u.location = glGetUniformLocation (shader.id, name);
+	u.type = UT::i;
+	u.value = i;
+}
+
+void attach (Shader shader, const char* name, float* f)
+{
+	Uniform u;
+	u.location = glGetUniformLocation (shader.id, name);
+	u.type = UT::f;
+	u.value = f;
+}
+
+void attach (Shader shader, const char* name, double* d)
+{
+	Uniform u;
+	u.location = glGetUniformLocation (shader.id, name);
+	u.type = UT::d;
+	u.value = d;
+}
+
+void attach (Shader shader, const char* name, float2* xy)
+{
+	Uniform u;
+	u.location = glGetUniformLocation (shader.id, name);
+	u.type = UT::xy;
+	u.value = xy;
+}
+
+void attach (Shader shader, const char* name, float3* xyz)
+{
+	Uniform u;
+	u.location = glGetUniformLocation (shader.id, name);
+	u.type = UT::xyz;
+	u.value = xyz;
+}
+
+void attach (Shader shader, const char* name, float4* xyzw)
+{
+	Uniform u;
+	u.location = glGetUniformLocation (shader.id, name);
+	u.type = UT::xyzw;
+	u.value = xyzw;
+}
+
+void attach (Shader shader, const char* name, Texture t)
+{
+	Uniform u;
+	u.location = glGetUniformLocation (shader.id, name);
+	u.type = UT::t;
+	u.value = &t.id;
 }

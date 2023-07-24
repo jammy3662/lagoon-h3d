@@ -5,14 +5,20 @@
 #include "engine/input.h"
 #include "engine/shader.h"
 #include "engine/texture.h"
+#include "engine/fb.h"
 
 int main (int argc, char** argv)
 {
 	init ();
 	initInput ();
 	
+	initGbuf ();
+	
 	Texture whale = loadTexture ("whale.jpg");
 	Shader main = loadShader ("shader/main.vs", "shader/main.fs");
+	attach (main, "ambient", 0.15);
+	attach (main, "nearClip", 0.01);
+	attach (main, "farClip", 1000.0);
 	//Model thing = loadMeshGl ("mesh/thing.glb");
 	
 	int paused = 0;
@@ -31,12 +37,7 @@ int main (int argc, char** argv)
 			else captureCursor ();
 		}
 		
-		useShader (main);
-		
-		setUniform ("ambient", 0.15);
-		
-		setUniform ("nearClip", 0.01);
-		setUniform ("farClip", 1000.0);
+		bindShader (main);
 		
 		refresh ();
 	}

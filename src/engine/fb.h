@@ -1,14 +1,16 @@
 #pragma once
 
-#include <glad.h>
-
 #include "define.h"
 
 struct Frame
 {
 	uint fbo;
+	uint depthbuf;
 	
-	uint w, h;
+	int width, height;
+	char shrinkFilter, growFilter;
+	
+	uint attachments [8];
 };
 
 enum Resolution
@@ -19,8 +21,13 @@ enum Resolution
 void setResolution (Resolution res);
 
 // set up g-buffer
-void initFramebuffers ();
+void initGbuf ();
 
-// get new framebuffer with buffer attachments
+// get new framebuffer
 // optional flags: non-linear filter defaults to nearest neighbor
-Frame newFrame (int width, int height, int attachments, char shrinkLinear = 1, char growLinear = 1);
+Frame newFramebuf (int width, int height, char shrinkLinear = 0, char growLinear = 1);
+
+// get new framebuffer, share existing depth buffer and filtering options
+// (sizes MUST match, else undefined behavior)
+// optional flags: non-linear filter defaults to nearest neighbor
+Frame cloneFramebuf (Frame framebuffer);
