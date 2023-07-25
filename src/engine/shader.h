@@ -35,7 +35,9 @@ extern Shader shader;
 // load vertex/fragment GLSL shader files from paths
 Shader loadShader (const char* vsPath, const char* fsPath);
 
-void bindShader (Shader s);
+Shader loadShaderCode (const char* vsCode, const char* fsCode);
+
+void useShader (Shader s);
 
 void attach (Shader shader, const char* uniform_name, int i);
 void attach (Shader shader, const char* uniform_name, float f);

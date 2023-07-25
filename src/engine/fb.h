@@ -23,6 +23,8 @@ void setResolution (Resolution res);
 // set up g-buffer
 void initGbuf ();
 
+void enableFramebuf (Frame& framebuffer);
+
 // get new framebuffer
 // optional flags: non-linear filter defaults to nearest neighbor
 Frame newFramebuf (int width, int height, char shrinkLinear = 0, char growLinear = 1);

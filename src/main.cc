@@ -2,15 +2,16 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "engine/input.h"
-#include "engine/shader.h"
-#include "engine/texture.h"
-#include "engine/fb.h"
+#include <engine/input.h>
+#include <engine/shader.h>
+#include <engine/texture.h>
+#include <engine/fb.h>
 
 int main (int argc, char** argv)
 {
 	init ();
 	initInput ();
+	initTextures ();
 	
 	initGbuf ();
 	
@@ -37,7 +38,7 @@ int main (int argc, char** argv)
 			else captureCursor ();
 		}
 		
-		bindShader (main);
+		useShader (main);
 		
 		refresh ();
 	}

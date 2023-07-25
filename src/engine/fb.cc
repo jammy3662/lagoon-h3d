@@ -8,6 +8,8 @@ uint framew = 1920, frameh = 1080;
 
 Frame gbuffer;
 
+Frame* currentfb = 0x0;
+
 const int resolutions [] =
 {
 	640, 360,
@@ -65,6 +67,12 @@ void initGbuf ()
 	
 	// unbind for safety
 	glBindFramebuffer (GL_FRAMEBUFFER, 0);
+}
+
+void enableFramebuf (Frame& fb)
+{
+	currentfb = &fb;
+	glBindFramebuffer (GL_FRAMEBUFFER, fb.fbo);
 }
 
 Frame newFramebuf (int w, int h, char shrink, char grow)

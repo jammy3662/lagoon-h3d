@@ -44,7 +44,7 @@ int textureUnit = 0;
 
 // load shader code from memory
 // (raw, null-terminated char pointers)
-Shader uploadShader (const char* vsCode, const char* fsCode)
+Shader loadShaderCode (const char* vsCode, const char* fsCode)
 {
 	Shader ret;
 	ret.compiled = 1;
@@ -110,7 +110,7 @@ Shader loadShader (const char* vsPath, const char* fsPath)
 	char* fragment = fileToBuffer (fsPath);
 	if (!fragment) fprintf (stderr, "Can't open fragment shader '%s'\n", fsPath);
 
-	ret = uploadShader (vertex, fragment);
+	ret = loadShaderCode (vertex, fragment);
 	
 	free (vertex);
 	free (fragment);
@@ -128,8 +128,12 @@ Shader loadShader (const char* vsPath, const char* fsPath)
 	return ret;
 }
 
-void bindShader (Shader s)
+void useShader (Shader s)
 {
+	// dont rebind shader
+	// if selected multiple times
+	if (shader.id == s.id) return;
+	
 	shader = s;
 	glUseProgram (s.id);
 	

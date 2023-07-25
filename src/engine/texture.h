@@ -7,6 +7,8 @@ struct Texture
 	uint id;
 };
 
+void initTextures ();
+
 // load texture from file at path
 Texture loadTexture (const char* path);
 
