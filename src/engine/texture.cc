@@ -36,14 +36,13 @@ const char* textureShaderF =
 "void main ()"
 "{"
 "	fragColor = texture (tex, UV);"
-"	fragColor = vec4 (UV.x, UV.y, 1, 1);"
 "}"
 ;
 
 const float textureQuad [] =
 {
-	-.5, .5, 0, 0, 1,		.5, .5,  0, 1, 1,
-	-.5, -.5, 0, 0, 0,		.5, -.5, 0, 1, 0,
+	-.5, .5, 0, 0, 0,		.5, .5,  0, 1, 0,
+	-.5, -.5, 0, 0, 1,		.5, -.5, 0, 1, 1,
 };
 enum {TL, TR, BL, BR};
 const uint textureQuadIndices [] =
@@ -114,7 +113,7 @@ Texture uploadTexture (int w, int h, int channels, char* texels)
 	// 0 element for padding (1 channel = GL_R)
 	int fmt [] = {GL_R, GL_R, GL_RG, GL_RGB, GL_RGBA};
 	
-	glTexImage2D (GL_TEXTURE_2D, 2, GL_RGBA, w, h,
+	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, w, h,
 		0, fmt [channels], GL_UNSIGNED_BYTE, texels);
 	glGenerateMipmap (GL_TEXTURE_2D);
 
@@ -144,8 +143,6 @@ Texture loadTexture (const char* path)
 
 void drawTexture (Texture texture, int x, int y, int w, int h)
 {
-	//useShader (textureShader);
-	
 	glUseProgram (textureShader.id);
 	
 	glActiveTexture (GL_TEXTURE0);
