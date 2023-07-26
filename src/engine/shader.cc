@@ -117,7 +117,7 @@ Shader loadShader (const char* vsPath, const char* fsPath)
 	
 	if (ret.compiled)
 	{
-		fprintf (stdout, "[•] Compiled '%s' and '%s'\n", vsPath, fsPath);
+		fprintf (stdout, "[.] Compiled '%s' and '%s'\n", vsPath, fsPath);
 	}
 	
 	else

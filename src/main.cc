@@ -24,6 +24,8 @@ int main (int argc, char** argv)
 	
 	int paused = 0;
 	
+	printf ("whale tex id %u\n", whale.id);
+	
 	//debugInput = 1;
 	
 	while (winOpen)
@@ -38,7 +40,13 @@ int main (int argc, char** argv)
 			else captureCursor ();
 		}
 		
-		useShader (main);
+		//useShader (main);
+		
+		glClearColor (0.15, 0.1, 0.2, 0);
+		glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		
+		// note:	params not implemented yet
+		drawTexture (whale, 0, 0, 0, 0);
 		
 		refresh ();
 	}

@@ -13,6 +13,8 @@ const char* textureShaderV =
 "layout (location = 0) in vec3 pos;"
 "layout (location = 1) in vec2 uv;"
 
+"uniform sampler2D tex;"
+
 "out vec2 UV;"
 
 "void main ()"
@@ -34,47 +36,52 @@ const char* textureShaderF =
 "void main ()"
 "{"
 "	fragColor = texture (tex, UV);"
+"	fragColor = vec4 (UV.x, UV.y, 1, 1);"
 "}"
 ;
 
 const float textureQuad [] =
 {
-	-0.5, 0.5, 0, 1, // top left
-	0.5, 0.5,  1, 1, // top right
-	0.5, -0.5, 0, 0, // bottom left
-	0.5, -0.5, 1, 0, // bottom right
+	-.5, .5, 0, 0, 1,		.5, .5,  0, 1, 1,
+	-.5, -.5, 0, 0, 0,		.5, -.5, 0, 1, 0,
 };
-
+enum {TL, TR, BL, BR};
 const uint textureQuadIndices [] =
 {
-	1, 3, 0,
-	3, 2, 0,
+	TR, BR, TL,
+	BR, BL, TL,
 };
 
 Shader textureShader;
-uint textureVao;
+uint textureVao, textureUniformLoc;
 
 void initTextures ()
 {
 	textureShader = loadShaderCode (textureShaderV, textureShaderF);
+	textureUniformLoc = glGetUniformLocation (textureShader.id, "tex");
 	
+	if (textureShader.compiled)
+		printf ("Compiled texture shader\n");
+		
 	uint vao, vbo, ebo;
 	
 	glGenVertexArrays (1, &vao);
 	glBindVertexArray (vao);
 	
-	glGenBuffers (2, &vbo);
-	glBindBuffer (GL_VERTEX_ARRAY, vbo);
-	glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, ebo);
+	glGenBuffers (1, &vbo);
+	glBindBuffer (GL_ARRAY_BUFFER, vbo);
+	glBufferData (GL_ARRAY_BUFFER, sizeof (textureQuad), textureQuad, GL_STATIC_DRAW);
 	
 	// position
+	glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof (float), (void*)0);
 	glEnableVertexAttribArray (0);
-	glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof (float), (void*)0);
 	// uv
+	glVertexAttribPointer (1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof (float), (void*) (3 * sizeof (float)));
 	glEnableVertexAttribArray (1);
-	glVertexAttribPointer (0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof (float), (float*)2);
 	
-	glBufferData (GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(float), textureQuadIndices, GL_STATIC_DRAW);
+	glGenBuffers (1, &ebo);
+	glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, ebo);
+	glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof(textureQuadIndices), textureQuadIndices, GL_STATIC_DRAW);
 	
 	// unbind for safety
 	glBindVertexArray (0);
@@ -98,7 +105,11 @@ Texture uploadTexture (int w, int h, int channels, char* texels)
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
 	// TODO:	replace with error handling/messsage
-	if (channels > 5) channels = 1;
+	if (channels > 5)
+	{
+		fprintf (stderr, "too many channels %u\n", channels);
+		channels = 1;
+	}
 	
 	// 0 element for padding (1 channel = GL_R)
 	int fmt [] = {GL_R, GL_R, GL_RG, GL_RGB, GL_RGBA};
@@ -121,7 +132,10 @@ Texture loadTexture (const char* path)
 	char* texels = (char*) stbi_load (path, &w, &h, &channels, 0);
 	
 	if (texels)
+	{
+		printf ("[.] Texture '%s' uploaded\n", path);
 		return uploadTexture (w, h, channels, texels);
+	}
 	
 	fprintf (stderr, "[x] Texture '%s' not found\n", path);
 	
@@ -130,9 +144,14 @@ Texture loadTexture (const char* path)
 
 void drawTexture (Texture texture, int x, int y, int w, int h)
 {
-	useShader (textureShader);
+	//useShader (textureShader);
+	
+	glUseProgram (textureShader.id);
+	
 	glActiveTexture (GL_TEXTURE0);
 	glBindTexture (GL_TEXTURE_2D, texture.id);
+	
+	glUniform1i (textureUniformLoc, 0);
 	
 	glBindVertexArray (textureVao);
 	glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0x0);

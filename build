@@ -14,6 +14,7 @@ mkdir -p bin
 
 for i in $(find src -iname '*.cc')
 do
+	echo -en "[$(basename -s '.cc' "$i")]\t\t"
 	echo "$i --> bin/$(basename -s '.cc' "$i").o"
 	clang++ -c "$i" -o "bin/$(basename -s '.cc' "$i").o" \
 		$CLANG_FLAGS
