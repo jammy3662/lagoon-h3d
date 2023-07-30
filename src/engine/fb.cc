@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <glad.h>
 
+#include "shader.h"
+
 // internal render resolution
 uint framew = 1920, frameh = 1080;
 
@@ -69,10 +71,14 @@ void initGbuf ()
 	glBindFramebuffer (GL_FRAMEBUFFER, 0);
 }
 
-void enableFramebuf (Frame& fb)
+void targetBuf (Frame framebuffer)
 {
-	currentfb = &fb;
-	glBindFramebuffer (GL_FRAMEBUFFER, fb.fbo);
+	glBindFramebuffer (GL_FRAMEBUFFER, framebuffer.fbo);
+}
+
+void targetBufDefault ()
+{
+	glBindFramebuffer (GL_FRAMEBUFFER, 0);
 }
 
 Frame newFramebuf (int w, int h, char shrink, char grow)
@@ -146,6 +152,15 @@ Frame cloneFramebuf (Frame fb)
 	
 	// unbind for safety
 	glBindFramebuffer (GL_FRAMEBUFFER, 0);
+	
+	return ret;
+}
+
+Texture fbAttachment (Frame framebuffer, uint attachment)
+{
+	Texture ret;
+	
+	ret.id = framebuffer.attachments [attachment];
 	
 	return ret;
 }

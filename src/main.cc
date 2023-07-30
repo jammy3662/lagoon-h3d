@@ -22,9 +22,9 @@ int main (int argc, char** argv)
 	attach (main, "farClip", 1000.0);
 	//Model thing = loadMeshGl ("mesh/thing.glb");
 	
-	int paused = 0;
+	Frame thing = newFramebuf (1280, 720);
 	
-	printf ("whale tex id %u\n", whale.id);
+	int paused = 0;
 	
 	//debugInput = 1;
 	
@@ -40,13 +40,17 @@ int main (int argc, char** argv)
 			else captureCursor ();
 		}
 		
-		//useShader (main);
+		targetBuf (thing);
 		
 		glClearColor (0.15, 0.1, 0.2, 0);
 		glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		// note:	params not implemented yet
 		drawTexture (whale, 0, 0, 0, 0);
+		
+		targetBufDefault ();
+		
+		drawTexture	(fbAttachment (thing, 0), 0, 0, 0, 0);
 		
 		refresh ();
 	}

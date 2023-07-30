@@ -1,6 +1,7 @@
 #pragma once
 
 #include "define.h"
+#include "texture.h"
 
 struct Frame
 {
@@ -23,7 +24,11 @@ void setResolution (Resolution res);
 // set up g-buffer
 void initGbuf ();
 
-void enableFramebuf (Frame& framebuffer);
+// set the render target for proceeding draw calls
+void targetBuf (Frame framebuffer);
+
+// render to main framebuffer
+void targetBufDefault ();
 
 // get new framebuffer
 // optional flags: non-linear filter defaults to nearest neighbor
@@ -33,3 +38,7 @@ Frame newFramebuf (int width, int height, char shrinkLinear = 0, char growLinear
 // (sizes MUST match, else undefined behavior)
 // optional flags: non-linear filter defaults to nearest neighbor
 Frame cloneFramebuf (Frame framebuffer);
+
+// gets a texture from the framebuffer's specified output buffer
+// (UNSAFE - not bounds checked)
+Texture fbAttachment (Frame framebuffer, uint attachment);
