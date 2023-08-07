@@ -5,12 +5,12 @@
 
 #include "shader.h"
 
-// internal render resolution
-uint framew = 1920, frameh = 1080;
+// gbuffer resolution
+int resx = 1920, resy = 1080;
+
+int framew = resx, frameh = resy, __a, __b;
 
 Frame gbuffer;
-
-Frame* currentfb = 0x0;
 
 const int resolutions [] =
 {
@@ -29,8 +29,32 @@ void setResolution (Resolution res)
 		fprintf (stderr, "Setting invalid resolution (%u)\n", res);
 	}
 	
-	framew = resolutions [2*res];
-	frameh = resolutions [2*res + 1];
+	resx = resolutions [2*res];
+	resy = resolutions [2*res + 1];
+}
+
+float2 getResolution ()
+{
+	return {resx, resy};
+}
+
+void framebuffer (Frame fb)
+{
+	framew = fb.width;
+	frameh = fb.height;
+	glBindFramebuffer (GL_FRAMEBUFFER, fb.fbo);
+}
+
+void framebufferDef ()
+{
+	framew = getResolution().x;
+	frameh = getResolution().y;
+	glBindFramebuffer (GL_FRAMEBUFFER, 0);
+}
+
+float2 getFrame ()
+{
+	return {framew, frameh};
 }
 
 void initGbuf ()
@@ -48,7 +72,7 @@ void initGbuf ()
 	{
 		glBindTexture (GL_TEXTURE_2D, gbuffer.attachments [i]);
 		// dont initialize with data as it would be drawn over anyway
-		glTexImage2D (GL_TEXTURE_2D, 0, formats [i], framew, frameh, 0, formats [i], GL_UNSIGNED_BYTE, 0x0);
+		glTexImage2D (GL_TEXTURE_2D, 0, formats [i], resx, resy, 0, formats [i], GL_UNSIGNED_BYTE, 0x0);
 		// dont interpolate for downscaling
 		// as this tends to look "blurry"
 		// and cause a smearing effect
@@ -59,7 +83,7 @@ void initGbuf ()
 	
 	glBindTexture (GL_TEXTURE_2D, gbuffer.depthbuf);
 	// dont initialize with data as it would be drawn over anyway
-	glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, framew, frameh, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0x0);
+	glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, resx, resy, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0x0);
 	// dont interpolate for downscaling
 	// as this tends to look "blurry"
 	// and cause a smearing effect
@@ -68,16 +92,6 @@ void initGbuf ()
 	glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, gbuffer.depthbuf, 0);
 	
 	// unbind for safety
-	glBindFramebuffer (GL_FRAMEBUFFER, 0);
-}
-
-void targetBuf (Frame framebuffer)
-{
-	glBindFramebuffer (GL_FRAMEBUFFER, framebuffer.fbo);
-}
-
-void targetBufDefault ()
-{
 	glBindFramebuffer (GL_FRAMEBUFFER, 0);
 }
 
@@ -145,8 +159,7 @@ Frame cloneFramebuf (Frame fb)
 	glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ret.attachments [0], 0);
 	
 	// depth buffer / texture
-	// pixels and parameters already configured,
-	// simply bind
+	// pixels and parameters already configured, simply bind
 	glBindTexture (GL_TEXTURE_2D, ret.depthbuf);
 	glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, ret.depthbuf, 0);
 	
@@ -156,11 +169,13 @@ Frame cloneFramebuf (Frame fb)
 	return ret;
 }
 
-Texture fbAttachment (Frame framebuffer, uint attachment)
+void drawFrame (Frame fb, uint attachment, float2 pos, float2 size)
 {
-	Texture ret;
+	Texture t;
+	t.id = fb.attachments [attachment];
+	t.w = -fb.width;
+	t.h = -fb.height;
 	
-	ret.id = framebuffer.attachments [attachment];
-	
-	return ret;
+	// flip image for framebuffer
+	drawTexture (t, {-pos.x, -pos.y}, {size.x, -size.y});
 }

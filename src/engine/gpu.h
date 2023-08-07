@@ -2,12 +2,7 @@
 
 #include "define.h"
 
-// need to include glad before GLFW
-// but keep glad in the implementation
-// to avoid clutter
-#ifdef LGN_IMPLEMENTATION
-	#include <glad.h>
-#endif
+#include <glad.h>
 #include <GLFW/glfw3.h>
 
 extern GLFWwindow* window;

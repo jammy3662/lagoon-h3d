@@ -1,9 +1,9 @@
 #include "texture.h"
+#include "fb.h"
 #include "shader.h"
 #include "disk.h"
 
 #include <stdio.h>
-#include <glad.h>
 
 #include <stb_image.h>
 
@@ -15,11 +15,13 @@ const char* textureShaderV =
 
 "uniform sampler2D tex;"
 
+"uniform mat4 transform;"
+
 "out vec2 UV;"
 
 "void main ()"
 "{"
-"	gl_Position = vec4 (pos.x, pos.y, pos.z, 1.0);"
+"	gl_Position = transform * vec4 (pos, 1.0);"
 "	UV = uv;"
 "}"
 ;
@@ -41,8 +43,8 @@ const char* textureShaderF =
 
 const float textureQuad [] =
 {
-	-.5, .5, 0, 0, 0,		.5, .5,  0, 1, 0,
-	-.5, -.5, 0, 0, 1,		.5, -.5, 0, 1, 1,
+	-1, 1, 0, 0, 0,		1, 1,  0, 1, 0,
+	-1, -1, 0, 0, 1,		1, -1, 0, 1, 1,
 };
 enum {TL, TR, BL, BR};
 const uint textureQuadIndices [] =
@@ -52,12 +54,14 @@ const uint textureQuadIndices [] =
 };
 
 Shader textureShader;
-uint textureVao, textureUniformLoc;
+uint textureVao, textureLoc, trLoc;
 
 void initTextures ()
 {
 	textureShader = loadShaderCode (textureShaderV, textureShaderF);
-	textureUniformLoc = glGetUniformLocation (textureShader.id, "tex");
+	
+	textureLoc = glGetUniformLocation (textureShader.id, "tex");
+	trLoc = glGetUniformLocation (textureShader.id, "transform");
 	
 	if (textureShader.compiled)
 		printf ("Compiled texture shader\n");
@@ -91,6 +95,9 @@ void initTextures ()
 Texture uploadTexture (int w, int h, int channels, char* texels)
 {
 	Texture ret;
+	
+	ret.w = w;
+	ret.h = h;
 
 	glGenTextures (1, &ret.id);
 	glBindTexture (GL_TEXTURE_2D, ret.id);
@@ -141,14 +148,37 @@ Texture loadTexture (const char* path)
 	return ret;
 }
 
-void drawTexture (Texture texture, int x, int y, int w, int h)
+void drawTexture (Texture texture, float2 pos, float2 size)
 {
 	glUseProgram (textureShader.id);
 	
 	glActiveTexture (GL_TEXTURE0);
 	glBindTexture (GL_TEXTURE_2D, texture.id);
 	
-	glUniform1i (textureUniformLoc, 0);
+	float2 dim = getFrame();
+	
+	if (dim.x == 0 ||	dim.y == 0) dim = {1280, 720};
+	
+	if (size.x == 0) size.x = (float) texture.w;
+	if (size.y == 0) size.y = (float) texture.h;
+	
+	float scaleX = size.x / dim.x;
+	float scaleY = size.y / dim.y;
+	
+	float posX = -pos.x / dim.x;
+	float posY = -pos.y / dim.y;
+	
+	posX -= 0.5;
+	posY -= 0.5;
+	
+	glm::mat4 transform = glm::mat4 (1.0);
+	transform = glm::translate <float>
+		(transform, glm::vec3 (posX, posY, 0.0f));
+	transform = glm::scale <float>
+		(transform, glm::vec3 (scaleX, scaleY, 1.0f));
+	
+	glUniform1i (textureLoc, 0);
+	glUniformMatrix4fv (trLoc, 1, GL_FALSE, &transform[0][0]);
 	
 	glBindVertexArray (textureVao);
 	glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0x0);

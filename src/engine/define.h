@@ -12,6 +12,10 @@ typedef struct { float x, y; } float2;
 typedef struct { float x, y, z; } float3;
 typedef struct { float x, y, z, w; } float4;
 
+typedef struct { int x, y; } int2;
+typedef struct { int x, y, z; } int3;
+typedef struct { int x, y, z, w; } int4;
+
 /*
 // buffer must be at least 3 bytes larger than output
 unsigned long b64 (unsigned char* dst, unsigned char* src, long ln)

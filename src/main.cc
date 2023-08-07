@@ -23,6 +23,7 @@ int main (int argc, char** argv)
 	//Model thing = loadMeshGl ("mesh/thing.glb");
 	
 	Frame thing = newFramebuf (1280, 720);
+	Frame zip = newFramebuf (640, 365);
 	
 	int paused = 0;
 	
@@ -40,17 +41,19 @@ int main (int argc, char** argv)
 			else captureCursor ();
 		}
 		
-		targetBuf (thing);
+		framebuffer (zip);
 		
-		glClearColor (0.15, 0.1, 0.2, 0);
+			glClearColor (0.15, 0.1, 0.2, 0);
+			glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			
+			drawTexture (whale, {100,100}, {60, 60});
+		
+		framebufferDef ();
+		
+		glClearColor (0.1, 0.1, 0.1, 0);
 		glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		// note:	params not implemented yet
-		drawTexture (whale, 0, 0, 0, 0);
-		
-		targetBufDefault ();
-		
-		drawTexture	(fbAttachment (thing, 0), 0, 0, 0, 0);
+		drawFrame (zip, 0, {300,300}, {1280, 720});
 		
 		refresh ();
 	}

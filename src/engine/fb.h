@@ -21,14 +21,19 @@ enum Resolution
 };
 void setResolution (Resolution res);
 
+float2 getResolution ();
+
+// bind a framebuffer (drawing and reading)
+void framebuffer (Frame buf);
+
+// bind default framebuffer
+void framebufferDef();
+
+// current framebuffer dimensions
+float2 getFrame ();
+
 // set up g-buffer
 void initGbuf ();
-
-// set the render target for proceeding draw calls
-void targetBuf (Frame framebuffer);
-
-// render to main framebuffer
-void targetBufDefault ();
 
 // get new framebuffer
 // optional flags: non-linear filter defaults to nearest neighbor
@@ -36,9 +41,6 @@ Frame newFramebuf (int width, int height, char shrinkLinear = 0, char growLinear
 
 // get new framebuffer, share existing depth buffer and filtering options
 // (sizes MUST match, else undefined behavior)
-// optional flags: non-linear filter defaults to nearest neighbor
-Frame cloneFramebuf (Frame framebuffer);
+Frame cloneFramebuf (Frame buf);
 
-// gets a texture from the framebuffer's specified output buffer
-// (UNSAFE - not bounds checked)
-Texture fbAttachment (Frame framebuffer, uint attachment);
+void drawFrame (Frame buf, uint attachment, float2 pos = {0,0}, float2 size = {0,0});
