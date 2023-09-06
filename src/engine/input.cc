@@ -107,7 +107,7 @@ void initInput ()
 		glfwSetInputMode (window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 	}
 	
-	glfwSetInputMode (window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	//glfwSetInputMode (window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetInputMode (window, GLFW_STICKY_KEYS, GLFW_TRUE);
 }
 	

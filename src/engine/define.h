@@ -8,40 +8,30 @@ typedef unsigned int uint;
 
 #define let constexpr static
 
-typedef struct { float x, y; } float2;
-typedef struct { float x, y, z; } float3;
-typedef struct { float x, y, z, w; } float4;
+struct float2 { float x, y; };
+struct float3 { float x, y, z; };
+struct float4 { float x, y, z, w; };
 
-typedef struct { int x, y; } int2;
-typedef struct { int x, y, z; } int3;
-typedef struct { int x, y, z, w; } int4;
-
-/*
-// buffer must be at least 3 bytes larger than output
-unsigned long b64 (unsigned char* dst, unsigned char* src, long ln)
+struct int2
 {
-	char* fmt = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-	unsigned long o = 0;
-	for (; ln > 0; ln -= 4)
-	{
-		unsigned int v = 0;
-		for (int i = 0; i < 4; i++)
-		{
-			int c = 0;
-			if (ln > 3 || i < ln)
-			{
-				for (;fmt [c] != src [i]; c++) if (!fmt [c]) goto r;
-				o++;
-			}
-			v = (v << 6) | c;
-		}
+	int x, y;
+	operator float2 ()
+	{ return {(float)x, (float)y}; }
+};
+struct int3
+{
+	int x, y, z;
+	operator float3 ()
+	{ return {(float)x, (float)y, (float)z}; }
+};
+struct int4
+{
+	int x, y, z, w;
+	operator float4 ()
+	{ return {(float)x, (float)y, (float)z, (float)w}; }
+};
 
-		v = htonl (v) >> 8;
-		*((int*) dst) = v;
-		src += 4;
-		dst += 3;
-	}
-r:
-	return ((o*3) >> 2);
-}
-*/
+struct Color
+{
+	char r, g, b, a;
+};

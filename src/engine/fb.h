@@ -9,10 +9,12 @@ struct Frame
 	uint depthbuf;
 	
 	int width, height;
-	char shrinkFilter, growFilter;
+	bool shrinkLinear, expandLinear;
 	
 	uint attachments [8];
 };
+
+extern Frame gbuffer;
 
 enum Resolution
 {
@@ -27,7 +29,7 @@ float2 getResolution ();
 void framebuffer (Frame buf);
 
 // bind default framebuffer
-void framebufferDef();
+void framebuffer();
 
 // current framebuffer dimensions
 float2 getFrame ();
@@ -35,12 +37,20 @@ float2 getFrame ();
 // set up g-buffer
 void initGbuf ();
 
+// bind and render to gbuffer
+void backbuffer ();
+
 // get new framebuffer
 // optional flags: non-linear filter defaults to nearest neighbor
-Frame newFramebuf (int width, int height, char shrinkLinear = 0, char growLinear = 1);
+Frame newFramebuf (int width, int height, bool shrinkLinear = 0, bool expandLinear = 1);
 
-// get new framebuffer, share existing depth buffer and filtering options
+// get new framebuffer, share existing depth buffer and texture parameters
 // (sizes MUST match, else undefined behavior)
 Frame cloneFramebuf (Frame buf);
 
-void drawFrame (Frame buf, uint attachment, float2 pos = {0,0}, float2 size = {0,0});
+// should flip vertically only when rendering directly to screen
+/* (UNSTABLE - DO NOT USE)
+void drawFrame (Frame buf, uint attachment, bool flip = false, float2 pos = {0,0}, float2 size = {0,0});
+*/
+
+void drawFrameFullscreen (Frame buf, int attachment);

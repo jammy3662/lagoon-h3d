@@ -53,3 +53,4 @@ void attach (Shader shader, const char* uniform_name, float2* xy);
 void attach (Shader shader, const char* uniform_name, float3* xyz);
 void attach (Shader shader, const char* uniform_name, float4* xyzw);
 void attach (Shader shader, const char* uniform_name, Texture t);
+void attach (Shader shader, const char* uniform_name, Texture t, bool linearSample, bool linearMipmap);

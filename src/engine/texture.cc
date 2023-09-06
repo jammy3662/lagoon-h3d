@@ -43,7 +43,7 @@ const char* textureShaderF =
 
 const float textureQuad [] =
 {
-	-1, 1, 0, 0, 0,		1, 1,  0, 1, 0,
+	-1, 1, 0, 0, 0,		1, 1, 0, 1, 0,
 	-1, -1, 0, 0, 1,		1, -1, 0, 1, 1,
 };
 enum {TL, TR, BL, BR};
@@ -54,17 +54,17 @@ const uint textureQuadIndices [] =
 };
 
 Shader textureShader;
-uint textureVao, textureLoc, trLoc;
+uint textureVao, textureLoc, transformLoc;
 
 void initTextures ()
 {
 	textureShader = loadShaderCode (textureShaderV, textureShaderF);
 	
 	textureLoc = glGetUniformLocation (textureShader.id, "tex");
-	trLoc = glGetUniformLocation (textureShader.id, "transform");
+	transformLoc = glGetUniformLocation (textureShader.id, "transform");
 	
 	if (textureShader.compiled)
-		printf ("Compiled texture shader\n");
+		printf ("[.] Compiled texture shader\n");
 		
 	uint vao, vbo, ebo;
 	
@@ -86,7 +86,6 @@ void initTextures ()
 	glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, ebo);
 	glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof(textureQuadIndices), textureQuadIndices, GL_STATIC_DRAW);
 	
-	// unbind for safety
 	glBindVertexArray (0);
 	
 	textureVao = vao;
@@ -110,10 +109,9 @@ Texture uploadTexture (int w, int h, int channels, char* texels)
 	// nearest for expanding, interpolate mipmap level
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
-	// TODO:	replace with error handling/messsage
 	if (channels > 5)
 	{
-		fprintf (stderr, "too many channels %u\n", channels);
+		printf ("[x] Too many channels in image: %u\n", channels);
 		channels = 1;
 	}
 	
@@ -148,37 +146,64 @@ Texture loadTexture (const char* path)
 	return ret;
 }
 
-void drawTexture (Texture texture, float2 pos, float2 size)
+void drawTexture (Texture tex, float x, float y, float sx, float sy)
 {
 	glUseProgram (textureShader.id);
 	
 	glActiveTexture (GL_TEXTURE0);
-	glBindTexture (GL_TEXTURE_2D, texture.id);
+	glBindTexture (GL_TEXTURE_2D, tex.id);
 	
-	float2 dim = getFrame();
-	
-	if (dim.x == 0 ||	dim.y == 0) dim = {1280, 720};
-	
-	if (size.x == 0) size.x = (float) texture.w;
-	if (size.y == 0) size.y = (float) texture.h;
-	
-	float scaleX = size.x / dim.x;
-	float scaleY = size.y / dim.y;
-	
-	float posX = -pos.x / dim.x;
-	float posY = -pos.y / dim.y;
-	
-	posX -= 0.5;
-	posY -= 0.5;
-	
-	glm::mat4 transform = glm::mat4 (1.0);
-	transform = glm::translate <float>
-		(transform, glm::vec3 (posX, posY, 0.0f));
-	transform = glm::scale <float>
-		(transform, glm::vec3 (scaleX, scaleY, 1.0f));
+	glm::mat4 transform =
+		glm::translate (glm::vec3 (x, y, 0.0f)) *
+		glm::scale (glm::vec3 (sx, sy, 1.0f));
 	
 	glUniform1i (textureLoc, 0);
-	glUniformMatrix4fv (trLoc, 1, GL_FALSE, &transform[0][0]);
+	glUniformMatrix4fv (transformLoc, 1, GL_FALSE, &transform[0][0]);
+	
+	glBindVertexArray (textureVao);
+	glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0x0);
+	glBindVertexArray (0);
+}
+
+void drawTexture (Texture texture, float2 pos, float2 size, bool flip)
+{
+	// screen/pixel space to ndc (-1 <-> 1)
+	
+	float2 frame = getFrame();
+	
+	float x, y, sx, sy;
+	
+	x = -0.5 + (-pos.x / frame.x);
+	y = -0.5 + ( pos.y / frame.y);
+	
+	if (size.x == 0 || size.y == 0)
+	{
+		size = {texture.w, texture.h};
+	}
+	
+	sx = 0.5 * size.x / frame.x;
+	sy = 0.5 * size.y / frame.y;
+	
+	if (flip) sy = -sy;
+	
+	drawTexture (texture, x, y, sx, sy);
+}
+
+void drawTextureFullscreen	(Texture tex, bool flipY, bool flipX)
+{
+	glUseProgram (textureShader.id);
+	
+	glActiveTexture (GL_TEXTURE0);
+	glBindTexture (GL_TEXTURE_2D, tex.id);
+	
+	glm::mat4 transform =
+		glm::translate (glm::vec3 (0, 0, 0)) *
+		glm::scale (glm::vec3 ((flipX)? -1:1, (flipY)? -1:1, 1));
+	
+	transform = glm::mat4 (1);
+	
+	glUniform1i (textureLoc, 0);
+	glUniformMatrix4fv (transformLoc, 1, GL_FALSE, &transform[0][0]);
 	
 	glBindVertexArray (textureVao);
 	glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0x0);
