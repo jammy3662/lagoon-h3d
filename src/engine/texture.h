@@ -12,84 +12,78 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
-/*
-#include <eigen3/Eigen/Core>
-#include <eigen3/Eigen/Geometry>
-*/
-
-struct Texture
-{
-	uint id;
-	int w, h;
-};
-
 // texture settings
 struct Sampler
 {
-	enum Filter : bool
-	{
-		NEAREST,
-		LINEAR,
-	};
+	enum Filter : char
+		{
+			NEAREST = GL_NEAREST,
+			LINEAR = GL_LINEAR,
+			NEAREST_NEAREST = GL_NEAREST_MIPMAP_NEAREST,
+			NEAREST_LINEAR = GL_NEAREST_MIPMAP_LINEAR,
+			LINEAR_NEAREST = GL_LINEAR_MIPMAP_NEAREST,
+			LINEAR_LINEAR = GL_LINEAR_MIPMAP_LINEAR,
+		};
 	
 	enum Wrap : char
-	{
-		REPEAT,
-		MIRRORED_REPEAT,
-		CLAMP_EDGE,
-		CLAMP_BORDER,
-	};
+		{
+			REPEAT = GL_REPEAT,
+			MIRRORED_REPEAT = GL_MIRRORED_REPEAT,
+			EDGE = GL_CLAMP_TO_EDGE,
+			COLOR = GL_CLAMP_TO_BORDER,
+		};
 	
-	Filter minFilter;
-	Filter magFilter;
-	Filter mipmapFilter;
+	struct
+		{	
+			Filter min, mag;
+		}
+	filter;
 	
-	Filter& min = minFilter;
-	Filter& mag = magFilter;
-	Filter& mip = mipmapFilter;
-	
-	Wrap wrapX, wrapY;
+	struct
+		{
+			union { Wrap x, s; };
+			union { Wrap y, t; };
+		}
+	wrap;
 
 	Color edgeColor;
 };
+typedef Sampler::Filter Filter;
+typedef Sampler::Wrap Wrap;
 
-enum Type
-{
-	STREAM, // 1-D
-	IMAGE, // 2-D
-	VOLUME, // 3-D
-	CUBEMAP, // 6 IMAGEs
-};
+Sampler genSampler
+(
+	Filter min = Filter::LINEAR, Filter mag = Filter::NEAREST,
+	Wrap x = Wrap::MIRRORED_REPEAT, Wrap y = Wrap::MIRRORED_REPEAT,
+	Color edgeColor = {0,0,0,0}
+);
 
-template <Type T>
-struct Pixels
+struct Texture
 {
-	uint id;
-};
-
-template <>
-struct Pixels <IMAGE>
-{
-	char width;
-	char height;
+	enum Buffer
+		{
+			EMPTY = 0, // error case
+			STREAM, // 1-D
+			IMAGE, // 2-D
+			DEPTH, // 2-D depth
+			CUBEMAP,
+		}
+	type;
 	
-	char& w = width;
-	char& h = height;
+	uint id; // opengl resource handle
+	
+	short width, height;
+	Sampler sampler;
 };
 
-// temporary struct to rewrite Texture
-struct Tex
-{
-	uint id;
-	
-	short width;
-	short height;
-	short& w = width;
-	short& h = height;
-	
-	Sampler parameters;
-	Sampler& param = parameters;
-};
+// 1-dimensional pixel buffer, rarely used
+Texture genStream (short length, Sampler params);
+// image with given width and height
+Texture genImage (short width, short height, Sampler params, bool depth = false);
+// set of 6 images with given width and height
+Texture genCubemap (short width, short height, Sampler params);
+
+// ==========
 
 void initTextures ();
 

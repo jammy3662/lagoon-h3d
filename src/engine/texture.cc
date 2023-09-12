@@ -91,12 +91,127 @@ void initTextures ()
 	textureVao = vao;
 }
 
+Sampler genSampler (Filter min, Filter mag, Wrap x, Wrap y, Color border)
+{
+	Sampler ret;
+	
+	// just populate the object
+	// texture functions will set hardware state
+	
+	ret.filter.min = min;
+	ret.filter.mag = mag;
+	
+	ret.wrap.x = x;
+	ret.wrap.y = y;
+	
+	ret.edgeColor = border;
+	
+	return ret;
+}
+
+Texture genStream (short length, Sampler sampler)
+{
+	Texture ret;
+	ret.type = Texture::STREAM;
+	ret.width = length; ret.height = 0;
+	ret.sampler = sampler;
+	
+	glGenTextures (1, &ret.id);
+	glBindTexture (GL_TEXTURE_1D, ret.id);
+	
+	glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, sampler.filter.min);
+	glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, sampler.filter.mag);
+	
+	glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, sampler.wrap.s);
+	
+	if (sampler.wrap.x == Wrap::COLOR)
+	{
+		int color = sampler.edgeColor.a |
+						(sampler.edgeColor.b << 1) |
+						(sampler.edgeColor.g << 2) |
+						(sampler.edgeColor.r << 3);
+		glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_BORDER_COLOR, color);
+	}
+	
+	glTexImage1D (GL_TEXTURE_1D, 0, GL_RGBA, length, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0x0);
+	
+	return ret;
+}
+
+Texture genImage (short width, short height, Sampler sampler, bool depth)
+{
+	Texture ret;
+	ret.type = (!depth) ? Texture::IMAGE : Texture::DEPTH;
+	ret.width = width; ret.height = height;
+	ret.sampler = sampler;
+	
+	glGenTextures (1, &ret.id);
+	glBindTexture (GL_TEXTURE_2D, ret.id);
+	
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, sampler.filter.min);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, sampler.filter.mag);
+	
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sampler.wrap.s);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, sampler.wrap.t);
+	
+	if (sampler.wrap.x == Wrap::COLOR ||
+		sampler.wrap.y == Wrap::COLOR)
+	{
+		int color = sampler.edgeColor.a |
+						(sampler.edgeColor.b << 1) |
+						(sampler.edgeColor.g << 2) |
+						(sampler.edgeColor.r << 3);
+		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
+	}
+	
+	if (!depth)
+		glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0x0);
+	else
+		glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0x0);
+	
+	return ret;
+}
+
+Texture genCubemap (short width, short height, Sampler sampler)
+{
+	Texture ret;
+	ret.type = Texture::CUBEMAP;
+	ret.width = width; ret.height = height;
+	ret.sampler = sampler;
+	
+	glGenTextures (1, &ret.id);
+	glBindTexture (GL_TEXTURE_2D, ret.id);
+	
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, sampler.filter.min);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, sampler.filter.mag);
+	
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sampler.wrap.s);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, sampler.wrap.t);
+	
+	if (sampler.wrap.x == Wrap::COLOR ||
+		sampler.wrap.y == Wrap::COLOR)
+	{
+		int color = sampler.edgeColor.a |
+						(sampler.edgeColor.b << 1) |
+						(sampler.edgeColor.g << 2) |
+						(sampler.edgeColor.r << 3);
+		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
+	}
+	
+	for (int i = 0; i < 6; ++i)
+	{
+		glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0x0);
+	}
+	
+	return ret;
+}
+
 Texture uploadTexture (int w, int h, int channels, char* texels)
 {
 	Texture ret;
 	
-	ret.w = w;
-	ret.h = h;
+	ret.width = w;
+	ret.height = h;
 
 	glGenTextures (1, &ret.id);
 	glBindTexture (GL_TEXTURE_2D, ret.id);
@@ -135,13 +250,27 @@ Texture loadTexture (const char* path)
 	int w, h, channels;
 	char* texels = (char*) stbi_load (path, &w, &h, &channels, 0);
 	
+	uint fmt;
+	switch (channels)
+	{
+		case (1): fmt = GL_R; break;
+		case (2): fmt = GL_RG; break;
+		case (3): fmt = GL_RGB; break;
+		case (4): fmt = GL_RGBA; break;
+		
+		default:
+			fprintf (stderr, "[x] Texture '%s' not found\n", path);
+	}
+	
 	if (texels)
 	{
 		printf ("[.] Texture '%s' uploaded\n", path);
+		
+		Texture t = genImage (w, h, genSampler());
+		glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, fmt, GL_UNSIGNED_BYTE, texels);
+		
 		return uploadTexture (w, h, channels, texels);
 	}
-	
-	fprintf (stderr, "[x] Texture '%s' not found\n", path);
 	
 	return ret;
 }
@@ -178,7 +307,7 @@ void drawTexture (Texture texture, float2 pos, float2 size, bool flip)
 	
 	if (size.x == 0 || size.y == 0)
 	{
-		size = {texture.w, texture.h};
+		size = {texture.width, texture.height};
 	}
 	
 	sx = 0.5 * size.x / frame.x;
