@@ -13,22 +13,24 @@ int main (int argc, char** argv)
 	initInput ();
 	initTextures ();
 	
-	setResolution (p1080);
-	
-	initGbuf ();
+	setRes (p1080);
 	
 	Texture whale = loadTexture ("whale.jpg");
 	
-	Shader main = loadShader ("shader/main.vs", "shader/main.fs");
-	attach (main, "ambient", 0.15);
-	attach (main, "nearClip", 0.01);
-	attach (main, "farClip", 1000.0);
+	Shader def = loadShader ("shader/main.vs", "shader/main.fs");
+	/*
+	attach (def, "ambient", 0.15);
+	attach (def, "nearClip", 0.01);
+	attach (def, "farClip", 1000.0);
+	*/
 	
-	Frame thing = newFramebuf (1280, 720);
-	Frame zip = newFramebuf (640, 365);
+	Frame thingB = genBuffer (1280, 720);
 	
-	int paused = 1;
-	debugInput = 0;
+	//Frame thing = genBuffer (1280, 720);
+	//Frame zip = genBuffer (640, 365);
+	
+	int paused = true;
+	debugInput = false;
 	
 	releaseCursor ();
 	
@@ -41,24 +43,24 @@ int main (int argc, char** argv)
 			paused = !paused;
 			
 			if (paused) releaseCursor ();
-			else captureCursor ();
+			       else captureCursor ();
 		}
 		
-		framebuffer (zip);
+		bindBuffer (thingB);
 		
-			glClearColor (0.15, 0.1, 0.2, 0);
-			glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			
-			float2 sz = getFrame();
-			sz.x *= 0.4; sz.y *= 0.4;
-			drawTexture (whale, {0,0}, {150, 160});
+			glClearColor (0.15, 0.1, 0.6, 1);
+			glClear (GL_COLOR_BUFFER_BIT);
 			
 			drawTextureFullscreen (whale);
 		
-		framebuffer();
+		bindBuffer ();
 		
-		drawFrameFullscreen (zip, 0);
+		glClearColor (0.15, 0.1, 0.2, 1);
+		glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
+		drawTextureFullscreen (thingB.outputs [0]);
+		//drawTextureFullscreen (whale);
+
 		refresh ();
 	}
 	

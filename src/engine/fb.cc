@@ -76,13 +76,26 @@ const char* gbufFrag =
 "}"
 ;
 
+static const uint glAttachments [] =
+{
+	GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1,
+	GL_COLOR_ATTACHMENT2,GL_COLOR_ATTACHMENT3,
+	GL_COLOR_ATTACHMENT4,GL_COLOR_ATTACHMENT5,
+	GL_COLOR_ATTACHMENT6,GL_COLOR_ATTACHMENT7,
+};
+
 // gbuffer resolution
-int resx = 1920, resy = 1080;
+struct
+{
+	int x = 1920, y = 1080;
+}
+res;
 
-int framew = resx, frameh = resy;
-
-Frame gbuffer;
-Shader gbufferShader;
+struct
+{
+	int w = res.x, h = res.y;
+}
+frame;
 
 const int resolutions [] =
 {
@@ -94,48 +107,129 @@ const int resolutions [] =
 	7680, 4320,
 };
 
-void setResolution (Resolution res)
+void setRes (Resolution r)
 {
-	if ((uint)res > p4320)
+	res.x = resolutions [2 * r];
+	res.y = resolutions [2 * r + 1];
+}
+
+void getRes (float* w, float* h)
+{
+	*w = res.x; *h = res.y;
+}
+
+Frame gbuffer;
+Shader gbufferShader;
+
+Frame bufferDefault;
+
+Frame genBuffer (Texture* outs, int nOutput)
+{
+	Frame ret;
+	
+	glGenFramebuffers (1, &ret.fbo);
+	glBindFramebuffer (GL_FRAMEBUFFER, ret.fbo);
+	
+	for (int i = 0; i < nOutput; ++i)
 	{
-		fprintf (stderr, "Setting invalid resolution (%u)\n", res);
+		Texture t = outs[i];
+		ret.outputs [i] = t;
+		
+		switch (t.type)
+{
+		case STREAM:
+		break;
+		// unsupported (so far)
+		// TODO: support this, maybe
+		
+		case IMAGE:
+			glBindTexture (GL_TEXTURE_2D, t.id);
+			glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, t.id, 0);
+			glBindTexture (GL_TEXTURE_2D, 0);
+		break;
+		
+		case DEPTHIMG:
+			glBindTexture (GL_TEXTURE_2D, t.id);
+			glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, t.id, 0);
+			glBindTexture (GL_TEXTURE_2D, 0);
+		break;
+		
+		case CUBEMAP:
+			fprintf (stderr, "");
+		break;
+		
+		default:
+			fprintf (stderr, "[x] Attaching generic (uninitialized) texture to framebuffer\n");
+		break;
+}
 	}
 	
-	resx = resolutions [2*res];
-	resy = resolutions [2*res + 1];
+	return ret;
 }
 
-float2 getResolution ()
+Frame genBuffer (Texture t)
 {
-	return {resx, resy};
-}
-
-void framebuffer (Frame fb)
-{
-	framew = fb.width;
-	frameh = fb.height;
-	glBindFramebuffer (GL_FRAMEBUFFER, fb.fbo);
-}
-
-void framebuffer ()
-{
-	framew = resx;
-	frameh = resy;
-	glBindFramebuffer (GL_FRAMEBUFFER, 0);
-}
-
-float2 getFrame ()
-{
-	return {framew, frameh};
-}
-
-// needs to be called again
-// to sync resolution, if it changes
-void initGbuf ()
-{
-	gbuffer.width = resx;
-	gbuffer.height = resy;
+	Frame ret;
 	
+	if (t.type != CUBEMAP)
+	{
+		ret.fbo = {};
+		fprintf (stderr, "[x] Trying to attach non-cubemap texture as cubemap\n");
+		return ret;
+	}
+	
+	ret.outputs [0] = t;
+	
+	glGenFramebuffers (1, &ret.fbo);
+	glBindFramebuffer (GL_FRAMEBUFFER, ret.fbo);
+	
+	glBindTexture (GL_TEXTURE_CUBE_MAP, t.id);
+	for (int i = 0; i < 6; ++i)
+	{
+		glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_CUBE_MAP_POSITIVE_X +	i, t.id, 0);
+	}
+	glBindTexture (GL_TEXTURE_CUBE_MAP, 0);
+	
+	return ret;
+}
+
+Frame genBuffer (int w, int h, int outs)
+{
+	Frame ret;
+	
+	glGenFramebuffers (1, &ret.fbo);
+	glBindFramebuffer (GL_FRAMEBUFFER, ret.fbo);
+	
+	glDrawBuffers (outs, glAttachments);
+	
+	for (int i = 0; i < outs; ++i)
+	{
+		Texture t = genImage (w, h);
+		ret.outputs [i] = t;
+		glBindTexture (GL_TEXTURE_2D, t.id);
+		glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, t.id, 0);
+		glBindTexture (GL_TEXTURE_2D, 0);
+	}
+	
+	glBindFramebuffer (GL_FRAMEBUFFER, 0);
+	
+	return ret;
+}
+
+void bindBuffer (Frame buffer, BufferOp mode)
+{
+	glBindFramebuffer (mode, buffer.fbo);
+}
+
+void bindBuffer (BufferOp mode)
+{
+	glBindFramebuffer (mode, 0);
+}
+
+// needs to be called again to sync resolution, if it changes
+void initGbuf ()
+
+{
 	if (!gbufferShader.compiled)
 		gbufferShader = loadShaderCode (gbufVert, gbufFrag);
 	
@@ -157,126 +251,4 @@ void initGbuf ()
 		GL_RGB, // normal
 		GL_RGB, // position
 	};
-	
-	constexpr int attribCt = sizeof (attribs) / sizeof (uint);
-	
-	for (int i = 0; i < attribCt; i++)
-	{
-		glGenTextures (1, gbuffer.attachments + i);
-		glBindTexture (GL_TEXTURE_2D, gbuffer.attachments [i]);
-		// dont initialize with data as it would be drawn over anyway
-		glTexImage2D (GL_TEXTURE_2D, 0, attribs [i], resx, resy, 0, attribs [i], GL_UNSIGNED_BYTE, 0x0);
-		// dont interpolate for downscaling -
-		// tends to look "blurry" or "smeared."
-		// no mipmaps, its being drawn as a fullscreen quad
-		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, gbuffer.attachments [i], 0);
-	}
-	
-	// same texture parameters as the other attachments
-	glBindTexture (GL_TEXTURE_2D, gbuffer.depthbuf);
-	glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, resx, resy, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0x0);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, gbuffer.depthbuf, 0);
-	glDrawBuffer (GL_DEPTH_ATTACHMENT);
-	
-	glBindFramebuffer (GL_FRAMEBUFFER, 0);
-}
-
-void backbuffer ()
-{
-	framebuffer (gbuffer);
-	
-	glUseProgram (gbufferShader.id);
-}
-
-Frame newFramebuf (int w, int h, bool shrink, bool grow)
-{
-	Frame ret;
-	
-	ret.width = w; ret.height = h;
-	ret.shrinkLinear = shrink;
-	ret.expandLinear = grow;
-	
-	uint minFilter = (shrink) ? GL_LINEAR : GL_NEAREST;
-	uint magFilter = (grow) ? GL_LINEAR : GL_NEAREST;
-	
-	glGenFramebuffers (1, &ret.fbo);
-	glBindFramebuffer (GL_FRAMEBUFFER, ret.fbo);
-	
-	glDrawBuffer (GL_COLOR_ATTACHMENT0);
-	
-	glGenTextures (1, ret.attachments);
-	
-	glBindTexture (GL_TEXTURE_2D, ret.attachments [0]);
-	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0x0);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
-	glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ret.attachments [0], 0);
-	
-	// depth buffer / texture
-	glBindTexture (GL_TEXTURE_2D, ret.depthbuf);
-	glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, w, h, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0x0);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
-	glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, ret.depthbuf, 0);
-	
-	// unbind for safety
-	glBindFramebuffer (GL_FRAMEBUFFER, 0);
-	
-	return ret;
-}
-
-Frame cloneFramebuf (Frame fb)
-{
-	// a shallow copy is fine here
-	// the resource handle will be replaced with the new fbo
-	Frame ret = fb;
-	
-	uint minFilter = (ret.shrinkLinear) ? GL_LINEAR : GL_NEAREST;
-	uint magFilter = (ret.expandLinear) ? GL_LINEAR : GL_NEAREST;
-	
-	glGenFramebuffers (1, &ret.fbo);
-	glBindFramebuffer (GL_FRAMEBUFFER, ret.fbo);
-	
-	glGenTextures (1, ret.attachments);
-	
-	// default to one color channel
-	glBindTexture (GL_TEXTURE_2D, ret.attachments [0]);
-	// dont initialize with data as it would be drawn over anyway
-	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, ret.width, ret.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0x0);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
-	glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ret.attachments [0], 0);
-	
-	// depth buffer / texture
-	// pixels and parameters already configured, simply bind
-	glBindTexture (GL_TEXTURE_2D, ret.depthbuf);
-	glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, ret.depthbuf, 0);
-	
-	glBindFramebuffer (GL_FRAMEBUFFER, 0);
-	
-	return ret;
-}
-
-/*
-void drawFrame (Frame buf, uint attachment, bool flip, float2 pos, float2 size)
-{
-	Texture tex;
-	tex.id = buf.attachments [attachment];
-	tex.w = buf.width; tex.h = buf.height;
-	
-	drawTexture (tex, pos, size, flip);
-}
-*/
-
-void drawFrameFullscreen (Frame buf, int attachment)
-{
-	Texture tex;
-	tex.id = buf.attachments [attachment];
-	
-	//drawTextureFullscreen (tex, true, true);
-	drawTextureFullscreen (tex, true, false);
 }

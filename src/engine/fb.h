@@ -3,54 +3,47 @@
 #include "define.h"
 #include "texture.h"
 
-struct Frame
-{
-	uint fbo;
-	uint depthbuf;
-	
-	int width, height;
-	bool shrinkLinear, expandLinear;
-	
-	uint attachments [8];
-};
-
-extern Frame gbuffer;
-
 enum Resolution
 {
 	p360, p540, p720,
 	p1080, p2160, p4320,
 };
-void setResolution (Resolution res);
 
-float2 getResolution ();
+enum BufferOp
+{
+	ALL = GL_FRAMEBUFFER,
+	DRAW = GL_DRAW_FRAMEBUFFER,
+	READ = GL_READ_FRAMEBUFFER
+};
 
-// bind a framebuffer (drawing and reading)
-void framebuffer (Frame buf);
+struct Frame
+{
+	uint fbo = {};
+	Texture outputs [8] = {};
+};
 
-// bind default framebuffer
-void framebuffer();
+extern Frame gbuffer;
+extern Frame bufferDefault;
 
-// current framebuffer dimensions
-float2 getFrame ();
+void setRes (Resolution res);
+void getRes (float* width, float* height);
+
+// one or more existing textures (any non-cubemap)
+Frame genBuffer (Texture* outputs, int nOutputs = 1);
+
+// a single cubemap texture
+Frame genBuffer (Texture cubemap);
+
+// one or more color buffers
+Frame genBuffer (int width, int height, int nOutputs = 1);
+
+void bindBuffer (Frame buffer, BufferOp mode = ALL);
+
+void bindBuffer (BufferOp mode = ALL); // default fb
+
+// ====================================== //
 
 // set up g-buffer
 void initGbuf ();
-
-// bind and render to gbuffer
-void backbuffer ();
-
-// get new framebuffer
-// optional flags: non-linear filter defaults to nearest neighbor
-Frame newFramebuf (int width, int height, bool shrinkLinear = 0, bool expandLinear = 1);
-
-// get new framebuffer, share existing depth buffer and texture parameters
-// (sizes MUST match, else undefined behavior)
-Frame cloneFramebuf (Frame buf);
-
-// should flip vertically only when rendering directly to screen
-/* (UNSTABLE - DO NOT USE)
-void drawFrame (Frame buf, uint attachment, bool flip = false, float2 pos = {0,0}, float2 size = {0,0});
-*/
 
 void drawFrameFullscreen (Frame buf, int attachment);

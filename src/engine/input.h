@@ -83,9 +83,10 @@ typedef std::array <Binding, INPUT_ACTION_CT> Mapping;
 
 extern const Mapping mouseAndKeyboard, gamepadAndJoystick;
 
+// current active bindings
 extern Mapping mapping;
 
-// enables console output when set
+// TODO: enables console output when set
 extern char debugInput;
 
 void initInput ();

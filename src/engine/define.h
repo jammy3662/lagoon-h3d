@@ -33,5 +33,5 @@ struct int4
 
 struct Color
 {
-	char r, g, b, a;
+	unsigned char r, g, b, a;
 };

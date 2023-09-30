@@ -7,88 +7,79 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
-
 #include <glm/mat4x4.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
+enum Filter
+{
+	NEAREST = GL_NEAREST,
+	LINEAR = GL_LINEAR,
+	NEAREST_NEAREST = GL_NEAREST_MIPMAP_NEAREST,
+	NEAREST_LINEAR = GL_NEAREST_MIPMAP_LINEAR,
+	LINEAR_NEAREST = GL_LINEAR_MIPMAP_NEAREST,
+	LINEAR_LINEAR = GL_LINEAR_MIPMAP_LINEAR,
+};
+
+enum Wrap
+{
+	REPEAT = GL_REPEAT,
+	MIRRORED_REPEAT = GL_MIRRORED_REPEAT,
+	EDGE = GL_CLAMP_TO_EDGE,
+	COLOR = GL_CLAMP_TO_BORDER,
+};
+
+enum Buffer
+{
+	EMPTY = 0, // error case
+	STREAM = GL_TEXTURE_1D, // 1-D
+	IMAGE = GL_TEXTURE_2D, // 2-D
+	DEPTHIMG = GL_TEXTURE_DEPTH, // 2-D depth
+	CUBEMAP = GL_TEXTURE_CUBE_MAP,
+};
+
 // texture settings
 struct Sampler
 {
-	enum Filter : char
-		{
-			NEAREST = GL_NEAREST,
-			LINEAR = GL_LINEAR,
-			NEAREST_NEAREST = GL_NEAREST_MIPMAP_NEAREST,
-			NEAREST_LINEAR = GL_NEAREST_MIPMAP_LINEAR,
-			LINEAR_NEAREST = GL_LINEAR_MIPMAP_NEAREST,
-			LINEAR_LINEAR = GL_LINEAR_MIPMAP_LINEAR,
-		};
-	
-	enum Wrap : char
-		{
-			REPEAT = GL_REPEAT,
-			MIRRORED_REPEAT = GL_MIRRORED_REPEAT,
-			EDGE = GL_CLAMP_TO_EDGE,
-			COLOR = GL_CLAMP_TO_BORDER,
-		};
-	
 	struct
-		{	
-			Filter min, mag;
-		}
+		{ Filter min, mag; }
 	filter;
 	
 	struct
-		{
-			union { Wrap x, s; };
-			union { Wrap y, t; };
-		}
+		{ union { Wrap x, s; };
+		  union { Wrap y, t; }; }
 	wrap;
 
 	Color edgeColor;
 };
-typedef Sampler::Filter Filter;
-typedef Sampler::Wrap Wrap;
-
-Sampler genSampler
-(
-	Filter min = Filter::LINEAR, Filter mag = Filter::NEAREST,
-	Wrap x = Wrap::MIRRORED_REPEAT, Wrap y = Wrap::MIRRORED_REPEAT,
-	Color edgeColor = {0,0,0,0}
-);
 
 struct Texture
 {
-	enum Buffer
-		{
-			EMPTY = 0, // error case
-			STREAM, // 1-D
-			IMAGE, // 2-D
-			DEPTH, // 2-D depth
-			CUBEMAP,
-		}
-	type;
+	Buffer type;
 	
-	uint id; // opengl resource handle
+	unsigned int id; // opengl resource handle
 	
 	short width, height;
-	Sampler sampler;
+	Sampler* sampler;
 };
 
+extern Sampler* const samplerDefault;
+
+// CURRENTLY UNSUPPORTED
 // 1-dimensional pixel buffer, rarely used
-Texture genStream (short length, Sampler params);
+Texture genStream (short length, Sampler* texparam = samplerDefault);
+
 // image with given width and height
-Texture genImage (short width, short height, Sampler params, bool depth = false);
+Texture genImage (short width, short height, bool depth = false, Sampler* texparam = samplerDefault);
 // set of 6 images with given width and height
-Texture genCubemap (short width, short height, Sampler params);
-
-// ==========
-
-void initTextures ();
+Texture genCubemap (short width, short height, Sampler* texparam = samplerDefault);
 
 // load texture from file at path
-Texture loadTexture (const char* path);
+Texture loadTexture (const char* path, Sampler* texparam = samplerDefault);
+
+// ==============================================
+
+void initTextures ();
 
 void drawTexture (Texture tex, float x, float y, float sx, float sy);
 

@@ -56,6 +56,15 @@ const uint textureQuadIndices [] =
 Shader textureShader;
 uint textureVao, textureLoc, transformLoc;
 
+Sampler vSamplerDefault =
+{
+	.filter = {LINEAR, NEAREST},
+	.wrap = {MIRRORED_REPEAT, MIRRORED_REPEAT},
+	.edgeColor = {255, 255, 255, 255}
+};
+
+Sampler* const samplerDefault = &vSamplerDefault;
+
 void initTextures ()
 {
 	textureShader = loadShaderCode (textureShaderV, textureShaderF);
@@ -91,138 +100,97 @@ void initTextures ()
 	textureVao = vao;
 }
 
-Sampler genSampler (Filter min, Filter mag, Wrap x, Wrap y, Color border)
-{
-	Sampler ret;
-	
-	// just populate the object
-	// texture functions will set hardware state
-	
-	ret.filter.min = min;
-	ret.filter.mag = mag;
-	
-	ret.wrap.x = x;
-	ret.wrap.y = y;
-	
-	ret.edgeColor = border;
-	
-	return ret;
-}
-
-Texture genStream (short length, Sampler sampler)
+Texture genImage (short w, short h, bool d, Sampler* param)
 {
 	Texture ret;
-	ret.type = Texture::STREAM;
-	ret.width = length; ret.height = 0;
-	ret.sampler = sampler;
+	ret.type = (!d) ? IMAGE : DEPTHIMG;
+	ret.width = w; ret.height = h;
 	
-	glGenTextures (1, &ret.id);
-	glBindTexture (GL_TEXTURE_1D, ret.id);
-	
-	glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, sampler.filter.min);
-	glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, sampler.filter.mag);
-	
-	glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, sampler.wrap.s);
-	
-	if (sampler.wrap.x == Wrap::COLOR)
-	{
-		int color = sampler.edgeColor.a |
-						(sampler.edgeColor.b << 1) |
-						(sampler.edgeColor.g << 2) |
-						(sampler.edgeColor.r << 3);
-		glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_BORDER_COLOR, color);
-	}
-	
-	glTexImage1D (GL_TEXTURE_1D, 0, GL_RGBA, length, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0x0);
-	
-	return ret;
-}
-
-Texture genImage (short width, short height, Sampler sampler, bool depth)
-{
-	Texture ret;
-	ret.type = (!depth) ? Texture::IMAGE : Texture::DEPTH;
-	ret.width = width; ret.height = height;
-	ret.sampler = sampler;
+	if (param) ret.sampler = param;
+	      else ret.sampler = samplerDefault;
 	
 	glGenTextures (1, &ret.id);
 	glBindTexture (GL_TEXTURE_2D, ret.id);
 	
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, sampler.filter.min);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, sampler.filter.mag);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, param->filter.min);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param->filter.mag);
 	
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sampler.wrap.s);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, sampler.wrap.t);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, param->wrap.s);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, param->wrap.t);
 	
-	if (sampler.wrap.x == Wrap::COLOR ||
-		sampler.wrap.y == Wrap::COLOR)
+	if (param->wrap.x == Wrap::COLOR ||
+		param->wrap.y == Wrap::COLOR)
 	{
-		int color = sampler.edgeColor.a |
-						(sampler.edgeColor.b << 1) |
-						(sampler.edgeColor.g << 2) |
-						(sampler.edgeColor.r << 3);
+		int color = param->edgeColor.a |
+					(param->edgeColor.b << 1) |
+					(param->edgeColor.g << 2) |
+					(param->edgeColor.r << 3);
 		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
 	}
 	
-	if (!depth)
-		glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0x0);
+	if (!d)
+		glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0x0);
 	else
-		glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0x0);
+		glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, w, h, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0x0);
+	
+	glBindTexture (GL_TEXTURE_2D, 0);
 	
 	return ret;
 }
 
-Texture genCubemap (short width, short height, Sampler sampler)
+Texture genCubemap (short w, short h, Sampler* param)
 {
 	Texture ret;
-	ret.type = Texture::CUBEMAP;
-	ret.width = width; ret.height = height;
-	ret.sampler = sampler;
+	ret.type = CUBEMAP;
+	ret.width = w; ret.height = h;
+	
+	if (param) ret.sampler = param;
+	      else ret.sampler = samplerDefault;
 	
 	glGenTextures (1, &ret.id);
-	glBindTexture (GL_TEXTURE_2D, ret.id);
+	glBindTexture (GL_TEXTURE_CUBE_MAP, ret.id);
 	
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, sampler.filter.min);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, sampler.filter.mag);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, param->filter.min);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, param->filter.mag);
 	
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sampler.wrap.s);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, sampler.wrap.t);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, param->wrap.s);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, param->wrap.t);
 	
-	if (sampler.wrap.x == Wrap::COLOR ||
-		sampler.wrap.y == Wrap::COLOR)
+	if (param->wrap.x == Wrap::COLOR ||
+		param->wrap.y == Wrap::COLOR)
 	{
-		int color = sampler.edgeColor.a |
-						(sampler.edgeColor.b << 1) |
-						(sampler.edgeColor.g << 2) |
-						(sampler.edgeColor.r << 3);
-		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
+		int color = param->edgeColor.a |
+					(param->edgeColor.b << 1) |
+					(param->edgeColor.g << 2) |
+					(param->edgeColor.r << 3);
+		glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BORDER_COLOR, color);
 	}
 	
 	for (int i = 0; i < 6; ++i)
 	{
-		glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0x0);
+		glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0x0);
 	}
+	
+	glBindTexture (GL_TEXTURE_CUBE_MAP, 0);
 	
 	return ret;
 }
 
-Texture uploadTexture (int w, int h, int channels, char* texels)
+Texture uploadTexture (int w, int h, int channels, char* texels, Sampler* param)
 {
 	Texture ret;
 	
 	ret.width = w;
 	ret.height = h;
+	ret.sampler = param;
 
 	glGenTextures (1, &ret.id);
 	glBindTexture (GL_TEXTURE_2D, ret.id);
 
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-
-	// linear for shrinking, interpolate mipmap level
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-	// nearest for expanding, interpolate mipmap level
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, param->wrap.s);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, param->wrap.t);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, param->filter.min);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param->filter.mag);
 
 	if (channels > 5)
 	{
@@ -240,7 +208,7 @@ Texture uploadTexture (int w, int h, int channels, char* texels)
 	return ret;
 }
 
-Texture loadTexture (const char* path)
+Texture loadTexture (const char* path, Sampler* param)
 {
 	Texture ret;
 	
@@ -266,11 +234,13 @@ Texture loadTexture (const char* path)
 	{
 		printf ("[.] Texture '%s' uploaded\n", path);
 		
-		Texture t = genImage (w, h, genSampler());
+		Texture t = genImage (w, h);
 		glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, fmt, GL_UNSIGNED_BYTE, texels);
 		
-		return uploadTexture (w, h, channels, texels);
+		return uploadTexture (w, h, channels, texels, param);
 	}
+	
+	ret.type = IMAGE;
 	
 	return ret;
 }
@@ -298,7 +268,7 @@ void drawTexture (Texture texture, float2 pos, float2 size, bool flip)
 {
 	// screen/pixel space to ndc (-1 <-> 1)
 	
-	float2 frame = getFrame();
+	float2 frame = {1920, 1080};
 	
 	float x, y, sx, sy;
 	
