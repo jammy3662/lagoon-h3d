@@ -1,6 +1,7 @@
 #include "texture.h"
 #include "fb.h"
 #include "shader.h"
+#include "gpu.h"
 #include "disk.h"
 
 #include <stdio.h>
@@ -254,7 +255,8 @@ void drawTexture (Texture tex, float x, float y, float sx, float sy)
 	
 	glm::mat4 transform =
 		glm::translate (glm::vec3 (x, y, 0.0f)) *
-		glm::scale (glm::vec3 (sx, sy, 1.0f));
+		glm::scale (glm::vec3 (sx, sy, 1.0f))
+	;
 	
 	glUniform1i (textureLoc, 0);
 	glUniformMatrix4fv (transformLoc, 1, false, &transform[0][0]);
@@ -268,12 +270,12 @@ void drawTexture (Texture texture, float2 pos, float2 size, bool flip)
 {
 	// screen/pixel space to ndc (-1 <-> 1)
 	
-	float2 frame = {1920, 1080};
+	float2 frame = {viewX, viewY};
 	
 	float x, y, sx, sy;
 	
-	x = -0.5 + (-pos.x / frame.x);
-	y = -0.5 + ( pos.y / frame.y);
+	x = pos.x / frame.x;
+	y = pos.y / frame.y;
 	
 	if (size.x == 0 || size.y == 0)
 	{

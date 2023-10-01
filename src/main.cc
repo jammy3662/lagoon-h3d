@@ -45,10 +45,10 @@ int main (int argc, char** argv)
 		
 		bindBuffer (thingB);
 		
-			glClearColor (0.15, 0.1, 0.6, 1);
+			glClearColor (0.15, 0.1, 0.35, 1);
 			glClear (GL_COLOR_BUFFER_BIT);
 			
-			drawTextureFullscreen (whale);
+			drawTexture (whale, {200,200}, {80,80});
 		
 		bindBuffer ();
 		
