@@ -24,10 +24,7 @@ int main (int argc, char** argv)
 	attach (def, "farClip", 1000.0);
 	*/
 	
-	Frame thingB = genBuffer (1280, 720);
-	
-	//Frame thing = genBuffer (1280, 720);
-	//Frame zip = genBuffer (640, 365);
+	Frame thingB = genBuffer (640, 365);
 	
 	int paused = true;
 	debugInput = false;

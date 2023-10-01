@@ -1,4 +1,5 @@
 #include "fb.h"
+#include "gpu.h"
 
 #include <stdio.h>
 #include <glad.h>
@@ -218,12 +219,16 @@ Frame genBuffer (int w, int h, int outs)
 
 void bindBuffer (Frame buffer, BufferOp mode)
 {
+	int w = buffer.outputs[0].width;
+	int h = buffer.outputs[0].height;
 	glBindFramebuffer (mode, buffer.fbo);
+	glViewport (0, 0, w, h);
 }
 
 void bindBuffer (BufferOp mode)
 {
 	glBindFramebuffer (mode, 0);
+	glViewport (0, 0, viewX, viewY);
 }
 
 // needs to be called again to sync resolution, if it changes

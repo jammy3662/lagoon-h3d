@@ -43,7 +43,5 @@ void bindBuffer (BufferOp mode = ALL); // default fb
 
 // ====================================== //
 
-// set up g-buffer
+// TODO: set up g-buffer
 void initGbuf ();
-
-void drawFrameFullscreen (Frame buf, int attachment);

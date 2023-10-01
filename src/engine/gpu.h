@@ -8,6 +8,8 @@
 extern GLFWwindow* window;
 extern char winOpen;
 
+extern int viewX, viewY;
+
 // initialize global hardware context
 void init (const char* winTitle = "Lagoon");
 

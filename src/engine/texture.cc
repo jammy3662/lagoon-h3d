@@ -44,7 +44,7 @@ const char* textureShaderF =
 const float textureQuad [] =
 {
 	-1, 1, 0, 0, 0,		1, 1, 0, 1, 0,
-	-1, -1, 0, 0, 1,		1, -1, 0, 1, 1,
+	-1,-1, 0, 0, 1,		1,-1, 0, 1, 1,
 };
 enum {TL, TR, BL, BR};
 const uint textureQuadIndices [] =
@@ -58,7 +58,7 @@ uint textureVao, textureLoc, transformLoc;
 
 Sampler vSamplerDefault =
 {
-	.filter = {LINEAR, NEAREST},
+	.filter = {.min = LINEAR, .mag = NEAREST_LINEAR},
 	.wrap = {MIRRORED_REPEAT, MIRRORED_REPEAT},
 	.edgeColor = {255, 255, 255, 255}
 };
@@ -257,7 +257,7 @@ void drawTexture (Texture tex, float x, float y, float sx, float sy)
 		glm::scale (glm::vec3 (sx, sy, 1.0f));
 	
 	glUniform1i (textureLoc, 0);
-	glUniformMatrix4fv (transformLoc, 1, GL_FALSE, &transform[0][0]);
+	glUniformMatrix4fv (transformLoc, 1, false, &transform[0][0]);
 	
 	glBindVertexArray (textureVao);
 	glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0x0);
@@ -295,14 +295,10 @@ void drawTextureFullscreen	(Texture tex, bool flipY, bool flipX)
 	glActiveTexture (GL_TEXTURE0);
 	glBindTexture (GL_TEXTURE_2D, tex.id);
 	
-	glm::mat4 transform =
-		glm::translate (glm::vec3 (0, 0, 0)) *
-		glm::scale (glm::vec3 ((flipX)? -1:1, (flipY)? -1:1, 1));
-	
-	transform = glm::mat4 (1);
+	glm::mat4 transform = glm::mat4 (1);
 	
 	glUniform1i (textureLoc, 0);
-	glUniformMatrix4fv (transformLoc, 1, GL_FALSE, &transform[0][0]);
+	glUniformMatrix4fv (transformLoc, 1, false, &transform[0][0]);
 	
 	glBindVertexArray (textureVao);
 	glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0x0);
