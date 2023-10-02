@@ -22,24 +22,39 @@ struct Frame
 	Texture outputs [8] = {};
 };
 
+extern
+struct frame
+{
+	union {int x, w;};
+	union {int y, h;};
+}
+frame;
+
 extern Frame gbuffer;
 extern Frame bufferDefault;
 
-void setRes (Resolution res);
-void getRes (float* width, float* height);
+void setRes
+	(Resolution res);
+void getRes
+	(float* width, float* height);
 
 // one or more existing textures (any non-cubemap)
-Frame genBuffer (Texture* outputs, int nOutputs = 1);
+Frame genBuffer
+	(Texture* outputs, int nOutputs = 1);
 
 // a single cubemap texture
-Frame genBuffer (Texture cubemap);
+Frame genBuffer
+	(Texture cubemap);
 
 // one or more color buffers
-Frame genBuffer (int width, int height, int nOutputs = 1);
+Frame genBuffer
+	(int width, int height, int nOutputs = 1);
 
-void bindBuffer (Frame buffer, BufferOp mode = ALL);
+void bindBuffer
+	(Frame buffer, BufferOp mode = ALL);
 
-void bindBuffer (BufferOp mode = ALL); // default fb
+void bindBuffer
+	(BufferOp mode = ALL); // default fb
 
 // ====================================== //
 

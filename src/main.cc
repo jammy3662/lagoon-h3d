@@ -5,26 +5,22 @@
 #include <engine/input.h>
 #include <engine/shader.h>
 #include <engine/texture.h>
-#include <engine/fb.h>
+#include <engine/buffer.h>
 
 int main (int argc, char** argv)
 {
-	init ();
-	initInput ();
-	initTextures ();
+	contextInit ();
+	inputInit ();
+	textureInit ();
 	
 	setRes (p1080);
 	
 	Texture whale = loadTexture ("whale.jpg");
 	
 	Shader def = loadShader ("shader/main.vs", "shader/main.fs");
-	/*
-	attach (def, "ambient", 0.15);
-	attach (def, "nearClip", 0.01);
-	attach (def, "farClip", 1000.0);
-	*/
 	
-	Frame thingB = genBuffer (640, 365);
+	Frame thingB = genBuffer (128, 72);
+	Frame final = genBuffer (640, 365);
 	
 	int paused = true;
 	debugInput = false;
@@ -33,7 +29,7 @@ int main (int argc, char** argv)
 	
 	while (winOpen)
 	{
-		refreshInput ();
+		inputRefresh ();
 		
 		if (buttonPressedNow (InputAction::MENU))
 		{
@@ -48,20 +44,19 @@ int main (int argc, char** argv)
 			glClearColor (0.15, 0.1, 0.35, 1);
 			glClear (GL_COLOR_BUFFER_BIT);
 			
-			drawTexture (whale, {200,200}, {80,80});
+			drawTexture (whale, 0,50, 20,20);
 		
 		bindBuffer ();
 		
-		glClearColor (0.15, 0.1, 0.2, 1);
+		glClearColor (0.15, 0.1, 0.1, 1);
 		glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		drawTextureFullscreen (thingB.outputs [0]);
-		//drawTextureFullscreen (whale);
+		drawFullscreen (thingB.outputs[0]);
 
-		refresh ();
+		contextRefresh ();
 	}
 	
-	close ();
+	contextClose ();
 	
 	return 0;
 }

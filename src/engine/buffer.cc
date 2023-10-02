@@ -1,5 +1,5 @@
-#include "fb.h"
-#include "gpu.h"
+#include "buffer.h"
+#include "context.h"
 
 #include <stdio.h>
 #include <glad.h>
@@ -85,18 +85,7 @@ static const uint glAttachments [] =
 	GL_COLOR_ATTACHMENT6,GL_COLOR_ATTACHMENT7,
 };
 
-// gbuffer resolution
-struct
-{
-	int x = 1920, y = 1080;
-}
-res;
-
-struct
-{
-	int w = res.x, h = res.y;
-}
-frame;
+struct frame frame = {.w = res.x, .h = res.y};
 
 const int resolutions [] =
 {
@@ -219,16 +208,28 @@ Frame genBuffer (int w, int h, int outs)
 
 void bindBuffer (Frame buffer, BufferOp mode)
 {
-	int w = buffer.outputs[0].width;
-	int h = buffer.outputs[0].height;
+	Texture t = buffer.outputs[0];
+	frame.x = t.width, frame.y = t.height;
+	
 	glBindFramebuffer (mode, buffer.fbo);
-	glViewport (0, 0, w, h);
+	
+	// save default fb viewport
+	int viewport [4];
+	glGetIntegerv (GL_VIEWPORT, viewport);
+	res.left = viewport[0], res.top = viewport[1];
+	res.x = viewport[2], res.y = viewport[3];
+	
+	glViewport (0, 0, frame.x, frame.y);
 }
 
 void bindBuffer (BufferOp mode)
 {
+	frame.y = res.x, frame.y = res.y;
+	
 	glBindFramebuffer (mode, 0);
-	glViewport (0, 0, viewX, viewY);
+	
+	// restore original viewport
+	glViewport (res.left, res.top, res.x, res.y);
 }
 
 // needs to be called again to sync resolution, if it changes

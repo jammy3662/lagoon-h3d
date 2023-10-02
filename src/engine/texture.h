@@ -65,34 +65,22 @@ struct Texture
 
 extern Sampler* const samplerDefault;
 
-// CURRENTLY UNSUPPORTED
-// 1-dimensional pixel buffer, rarely used
-Texture genStream (short length, Sampler* texparam = samplerDefault);
+void textureInit ();
 
 // image with given width and height
-Texture genImage (short width, short height, bool depth = false, Sampler* texparam = samplerDefault);
+Texture genImage
+	(short width, short height, bool depth = false, Sampler* texparam = samplerDefault);
 // set of 6 images with given width and height
-Texture genCubemap (short width, short height, Sampler* texparam = samplerDefault);
+Texture genCubemap
+	(short width, short height, Sampler* texparam = samplerDefault);
 
 // load texture from file at path
-Texture loadTexture (const char* path, Sampler* texparam = samplerDefault);
-
-// ==============================================
-
-void initTextures ();
-
-void drawTexture (Texture tex, float x, float y, float sx, float sy);
-
+Texture loadTexture
+	(const char* path, Sampler* texparam = samplerDefault);
+	
 // position & size in pixel (screen) coordinates
 void drawTexture
-(
-	Texture tex,
-	float2 pos = {0,0}, // bottom left
-	float2 size = {0,0}, // use texture size
-	bool flip = false
-);
+	(Texture tex, int x = 0, int y = 0, int w = 0, int h = 0);
 
-void drawTextureFullscreen (Texture tex, bool flip = false, bool flipX = false);
-
-// texture faces camera
-void drawBillboard (Texture texture, float x, float y, float z);
+void drawFullscreen
+	(Texture tex, bool flipV = false, bool flipH = false);

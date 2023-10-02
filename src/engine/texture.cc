@@ -1,7 +1,7 @@
 #include "texture.h"
-#include "fb.h"
+#include "buffer.h"
 #include "shader.h"
-#include "gpu.h"
+#include "context.h"
 #include "disk.h"
 
 #include <stdio.h>
@@ -66,7 +66,7 @@ Sampler vSamplerDefault =
 
 Sampler* const samplerDefault = &vSamplerDefault;
 
-void initTextures ()
+void textureInit ()
 {
 	textureShader = loadShaderCode (textureShaderV, textureShaderF);
 	
@@ -246,16 +246,29 @@ Texture loadTexture (const char* path, Sampler* param)
 	return ret;
 }
 
-void drawTexture (Texture tex, float x, float y, float sx, float sy)
+void drawTexture (Texture t, int X, int Y, int W, int H)
 {
+	float x = X, y = Y, w = W, h = H;
+	
+	x /= frame.x;
+	y /= frame.y;
+	
+	if (!W || !H)
+		// default to source dimensions
+		w = (float) t.width / frame.x,
+		h = (float) t.height / frame.y;
+	else
+		w /= frame.x * 2,
+		h /= frame.y * 2;
+	
 	glUseProgram (textureShader.id);
 	
 	glActiveTexture (GL_TEXTURE0);
-	glBindTexture (GL_TEXTURE_2D, tex.id);
+	glBindTexture (GL_TEXTURE_2D, t.id);
 	
 	glm::mat4 transform =
 		glm::translate (glm::vec3 (x, y, 0.0f)) *
-		glm::scale (glm::vec3 (sx, sy, 1.0f))
+		glm::scale (glm::vec3 (w, h, 1.0f))
 	;
 	
 	glUniform1i (textureLoc, 0);
@@ -266,36 +279,12 @@ void drawTexture (Texture tex, float x, float y, float sx, float sy)
 	glBindVertexArray (0);
 }
 
-void drawTexture (Texture texture, float2 pos, float2 size, bool flip)
-{
-	// screen/pixel space to ndc (-1 <-> 1)
-	
-	float2 frame = {viewX, viewY};
-	
-	float x, y, sx, sy;
-	
-	x = pos.x / frame.x;
-	y = pos.y / frame.y;
-	
-	if (size.x == 0 || size.y == 0)
-	{
-		size = {texture.width, texture.height};
-	}
-	
-	sx = 0.5 * size.x / frame.x;
-	sy = 0.5 * size.y / frame.y;
-	
-	if (flip) sy = -sy;
-	
-	drawTexture (texture, x, y, sx, sy);
-}
-
-void drawTextureFullscreen	(Texture tex, bool flipY, bool flipX)
+void drawFullscreen (Texture t, bool v, bool h)
 {
 	glUseProgram (textureShader.id);
 	
 	glActiveTexture (GL_TEXTURE0);
-	glBindTexture (GL_TEXTURE_2D, tex.id);
+	glBindTexture (GL_TEXTURE_2D, t.id);
 	
 	glm::mat4 transform = glm::mat4 (1);
 	

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gpu.h"
+#include "context.h"
 
 #include <array>
 
@@ -89,8 +89,8 @@ extern Mapping mapping;
 // TODO: enables console output when set
 extern char debugInput;
 
-void initInput ();
-void refreshInput ();
+void inputInit ();
+void inputRefresh ();
 
 void captureCursor ();
 void releaseCursor ();

@@ -96,7 +96,7 @@ void inputScrollCallback (GLFWwindow* window, double x, double y)
 	glfwScrollY = y;
 }
 
-void initInput ()
+void inputInit ()
 {
 	// TODO: load saved controls from file
 	
@@ -111,7 +111,7 @@ void initInput ()
 	glfwSetInputMode (window, GLFW_STICKY_KEYS, GLFW_TRUE);
 }
 	
-void refreshInput ()
+void inputRefresh ()
 {
 	glfwPollEvents ();
 	

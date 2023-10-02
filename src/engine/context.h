@@ -8,13 +8,19 @@
 extern GLFWwindow* window;
 extern char winOpen;
 
-extern int viewX, viewY;
+extern struct res
+{
+	int left, top;
+	union {int x,w;};
+	union {int y,h;};
+}
+res;
 
 // initialize global hardware context
-void init (const char* winTitle = "Lagoon");
+void contextInit (const char* winTitle = "Lagoon");
 
 // refresh gpu/hardware state
-void refresh ();
+void contextRefresh ();
 
 // close gpu context
-void close ();
+void contextClose ();
