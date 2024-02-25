@@ -87,16 +87,16 @@ extern const Mapping mouseAndKeyboard, gamepadAndJoystick;
 extern Mapping mapping;
 
 // TODO: enables console output when set
-extern char debugInput;
+char debug;
 
-void inputInit ();
-void inputRefresh ();
+void initInput ();
+void refreshInput ();
 
-void captureCursor ();
-void releaseCursor ();
+void capture ();
+void release ();
 
-char buttonPressed (InputAction button);
-char buttonPressedNow (InputAction button);
+char pressed (InputAction button);
+char pressedNow (InputAction button);
 
 float2 axisL ();
 float2 axisR ();

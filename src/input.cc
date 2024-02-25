@@ -96,7 +96,7 @@ void inputScrollCallback (GLFWwindow* window, double x, double y)
 	glfwScrollY = y;
 }
 
-void inputInit ()
+void initInput ()
 {
 	// TODO: load saved controls from file
 	
@@ -111,7 +111,7 @@ void inputInit ()
 	glfwSetInputMode (window, GLFW_STICKY_KEYS, GLFW_TRUE);
 }
 	
-void inputRefresh ()
+void refreshInput ()
 {
 	glfwPollEvents ();
 	
@@ -208,7 +208,7 @@ void inputRefresh ()
 		
 		pressedActions [idx] = (binding.strength != 0.0);
 		
-		if (debugInput && buttonPressedNow ((InputAction) idx))
+		if (debugInput && pressedNow ((InputAction) idx))
 			printf ("◌ %s\n", inputNames [idx]);
 		
 		idx++;
@@ -225,12 +225,12 @@ void captureCursor ()
 	glfwSetInputMode (window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
-char buttonPressed (InputAction button)
+char pressed (InputAction button)
 {
 	return pressedActions [button];
 }
 
-char buttonPressedNow (InputAction button)
+char pressedNow (InputAction button)
 {
 	return pressedActions [button] && !heldActions [button];
 }

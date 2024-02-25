@@ -1,36 +1,20 @@
 #!/bin/bash
 
 CLANG_FLAGS=" \
--fcolor-diagnostics \
--g3 \
--Wno-c++11-narrowing -Wno-write-strings -Wno-reserved-user-defined-literal \
-\
--isystem src -isystem include \
+	`sdl2-config --cflags` \
+	-fcolor-diagnostics -g3 \
+	-Wno-c++11-narrowing -Wno-write-strings -Wno-reserved-user-defined-literal \
+	-I$(realpath include) \
 "
 
-echo "..."
+echo "____ Build ____"
 
-mkdir -p bin
+mkdir -p out
 
-for i in $(find src -iname '*.cc')
-do
-	echo -en "[$(basename -s '.cc' "$i")]\t\t"
-	echo "$i --> bin/$(basename -s '.cc' "$i").o"
-	clang++ -c "$i" -o "bin/$(basename -s '.cc' "$i").o" \
-		$CLANG_FLAGS
-done
+cd src
+clang++ -static -c *.cc $CLANG_FLAGS
+clang *.o -o lagoon -lm -lmpack -Llib -L/usr/lib/x86_64-linux-gnu -lGL -lglfw `sdl2-config --libs`
+rm *.o
+cd ..
 
-clang++ bin/* -o lagoon $CLANG_FLAGS \
--Llib -lGL -lglad -lglfw \
-$@ \
-#2>&1 >/dev/null | grep -E 'error'
-
-# capture clang error code
-SUCCESS=$?
-
-echo "..."
-
-# it always comes back
-rm -rf .vscode
-
-exit $SUCCESS
+echo "____ End build ____"
