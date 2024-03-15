@@ -1,6 +1,7 @@
-# Lagoon
+## Lagoon
+### Perfect your aim, pick off enemies, and paint the world your color!
 
-A team-based online paint shooter game. Join friends in several exciting game modes; take your pick from a selection of unique weapons; earn rewards and customizations. Improve your aim, pick off opponents, and paint over the world!
+A team-based online paint shooter game. Join friends in several exciting game modes; take your pick from a selection of unique weapons; earn rewards and customizations. Perfect your aim, pick off enemies, and paint the world your color!
 
 ### Structure
 
